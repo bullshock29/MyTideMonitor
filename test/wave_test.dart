@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_tide_monitor/models/wave_conditions.dart';
+import 'package:my_tide_monitor/services/settings_service.dart';
 import 'package:my_tide_monitor/services/wave_size.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   group('WaveConditions.fromJson', () {
@@ -70,19 +72,47 @@ void main() {
     });
   });
 
-  group('formatting', () {
+  group('formatting in feet', () {
+    final feet = SettingsService(); // feet is the default
+
     test('rounds to the nearest half foot', () {
-      expect(formatWaveFeet(3.084), '3 ft');
-      expect(formatWaveFeet(2.3), '2.5 ft');
-      expect(formatWaveFeet(2.7), '2.5 ft');
-      expect(formatWaveFeet(0.066), '0 ft');
-      expect(formatWaveFeet(11.2), '11 ft');
+      expect(formatWaveHeight(3.084, feet), '3 ft');
+      expect(formatWaveHeight(2.3, feet), '2.5 ft');
+      expect(formatWaveHeight(2.7, feet), '2.5 ft');
+      expect(formatWaveHeight(0.066, feet), '0 ft');
+      expect(formatWaveHeight(11.2, feet), '11 ft');
     });
 
     test('ranges', () {
-      expect(formatWaveRange(1.0, 3.0), '1 to 3 ft');
-      expect(formatWaveRange(1.4, 2.6), '1.5 to 2.5 ft');
-      expect(formatWaveRange(2.9, 3.1), '3 ft');
+      expect(formatWaveRange(1.0, 3.0, feet), '1 to 3 ft');
+      expect(formatWaveRange(1.4, 2.6, feet), '1.5 to 2.5 ft');
+      expect(formatWaveRange(2.9, 3.1, feet), '3 ft');
+    });
+  });
+
+  group('formatting in meters', () {
+    late SettingsService meters;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      meters = SettingsService();
+      await meters.setHeightUnit(HeightUnit.meters);
+    });
+
+    test('rounds to the nearest 0.1 m', () {
+      expect(formatWaveHeight(3.084, meters), '0.9 m'); // 0.94 m
+      expect(formatWaveHeight(6.56, meters), '2.0 m');
+      expect(formatWaveHeight(0.066, meters), '0.0 m');
+    });
+
+    test('ranges', () {
+      expect(formatWaveRange(1.0, 3.0, meters), '0.3 to 0.9 m');
+      expect(formatWaveRange(3.0, 3.1, meters), '0.9 m');
+    });
+
+    test('the size words do not depend on the unit', () {
+      // 3 ft is "Moderate" whether it is shown as 3 ft or 0.9 m.
+      expect(waveSizeLabel(3), 'Moderate');
     });
   });
 }

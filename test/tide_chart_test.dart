@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_tide_monitor/models/prediction.dart';
 import 'package:my_tide_monitor/models/tide_point.dart';
+import 'package:my_tide_monitor/services/settings_service.dart';
 import 'package:my_tide_monitor/services/tide_curve.dart';
+import 'package:my_tide_monitor/widgets/settings_scope.dart';
 import 'package:my_tide_monitor/widgets/tide_chart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 DateTime _t(String utc) => DateTime.parse('${utc.replaceFirst(' ', 'T')}Z');
 
@@ -20,11 +23,45 @@ TideCurve _curve({bool estimated = true}) {
   return TideCurve(curveFromExtremes(extremes), isEstimated: estimated);
 }
 
-Widget _app(Widget child) => MaterialApp(
-      home: Scaffold(body: SingleChildScrollView(child: Padding(padding: const EdgeInsets.all(16), child: child))),
+/// Wraps [child] the way main.dart does, so widgets can read the settings.
+Widget _app(Widget child, {SettingsService? settings}) => SettingsScope(
+      settings: settings ?? SettingsService(),
+      child: MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: Padding(padding: const EdgeInsets.all(16), child: child),
+          ),
+        ),
+      ),
     );
 
 void main() {
+  testWidgets('shows heights in the chosen unit and updates when it changes', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final settings = SettingsService();
+    final view = TideChartView(curve: _curve(estimated: false), now: _t('2026-10-06 19:00'));
+
+    // A number followed by the unit, like "0.3 ft" or "-0.18 m". (Looking for
+    // just " m" would also match the word "mean" in the caption.)
+    Finder height(String unit) => find.byWidgetPredicate(
+          (w) => w is Text && RegExp('^-?\\d+\\.\\d+ $unit\$').hasMatch(w.data ?? ''),
+        );
+
+    await tester.pumpWidget(_app(view, settings: settings));
+    expect(height('ft'), findsOneWidget);
+    expect(height('m'), findsNothing);
+    expect(find.textContaining('in feet'), findsOneWidget);
+
+    // Switching to meters rebuilds the chart in place, with no new data.
+    await settings.setHeightUnit(HeightUnit.meters);
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(height('ft'), findsNothing);
+    expect(height('m'), findsOneWidget);
+    expect(find.textContaining('in meters'), findsOneWidget);
+  });
+
   testWidgets('shows the current height, direction and an estimate note', (tester) async {
     tester.view.physicalSize = const Size(800, 1400);
     tester.view.devicePixelRatio = 2;

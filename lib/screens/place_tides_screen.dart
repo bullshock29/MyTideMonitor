@@ -9,6 +9,7 @@ import 'package:my_tide_monitor/services/station_locator.dart';
 import 'package:my_tide_monitor/services/station_picker.dart';
 import 'package:my_tide_monitor/services/station_repository.dart';
 import 'package:my_tide_monitor/services/tide_format.dart';
+import 'package:my_tide_monitor/widgets/settings_scope.dart';
 import 'package:my_tide_monitor/widgets/station_tides.dart';
 
 /// What the screen found: the station(s) to offer, and whether any stations
@@ -116,7 +117,8 @@ class _PlaceTidesScreenState extends State<PlaceTidesScreen> {
 
           if (!outcome.anyStations) {
             return _Centered(
-              text: 'No tide stations within ${_maxMiles.round()} miles of '
+              text: 'No tide stations within '
+                  '${SettingsScope.of(context).formatDistance(_maxMiles, decimals: 0)} of '
                   '${widget.place.description}.\n\n'
                   'NOAA stations cover the US and its territories.',
             );
@@ -172,7 +174,7 @@ class _PlaceTidesScreenState extends State<PlaceTidesScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(station.name, style: Theme.of(context).textTheme.titleMedium),
-              Text('${candidate.miles.toStringAsFixed(1)} mi away'),
+              Text('${SettingsScope.of(context).formatDistance(candidate.miles)} away'),
               const SizedBox(height: 16),
               StationTides(stationId: station.id, upcomingLimit: 3),
             ],
@@ -235,6 +237,7 @@ class _ChoiceCard extends StatelessWidget {
     final setting = guessSetting(station.name);
     final high = candidate.nextHigh;
     final textTheme = Theme.of(context).textTheme;
+    final settings = SettingsScope.of(context);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -254,11 +257,11 @@ class _ChoiceCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     if (high != null)
                       Text(
-                        'Next high ${formatTideTime(high.time)} '
-                        '• ${high.value.toStringAsFixed(1)} ft',
+                        'Next high ${formatTideTime(high.time, settings)} '
+                        '• ${settings.formatHeight(high.value)}',
                         style: textTheme.titleSmall,
                       ),
-                    Text('${candidate.miles.toStringAsFixed(1)} mi away'),
+                    Text('${settings.formatDistance(candidate.miles)} away'),
                   ],
                 ),
               ),

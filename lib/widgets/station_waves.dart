@@ -4,6 +4,7 @@ import 'package:my_tide_monitor/models/wave_conditions.dart';
 import 'package:my_tide_monitor/services/station_hint.dart';
 import 'package:my_tide_monitor/services/wave_service.dart';
 import 'package:my_tide_monitor/services/wave_size.dart';
+import 'package:my_tide_monitor/widgets/settings_scope.dart';
 
 /// How big the waves are near a station: the size now, with a plain word for
 /// it, and the range over the next day.
@@ -58,6 +59,7 @@ class _StationWavesState extends State<StationWaves> {
         if (conditions == null) return const SizedBox.shrink(); // error or no data
 
         final textTheme = Theme.of(context).textTheme;
+        final settings = SettingsScope.of(context);
         return Padding(
           padding: const EdgeInsets.only(top: 16),
           child: Row(
@@ -73,12 +75,12 @@ class _StationWavesState extends State<StationWaves> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Waves ${formatWaveFeet(conditions.nowFeet)} '
+                      'Waves ${formatWaveHeight(conditions.nowFeet, settings)} '
                       '• ${waveSizeLabel(conditions.nowFeet)}',
                       style: textTheme.titleMedium,
                     ),
                     Text(
-                      'Next 24 hours: ${formatWaveRange(conditions.next24HoursMinFeet, conditions.next24HoursMaxFeet)}',
+                      'Next 24 hours: ${formatWaveRange(conditions.next24HoursMinFeet, conditions.next24HoursMaxFeet, settings)}',
                     ),
                     if (widget.showNotes)
                       Text(

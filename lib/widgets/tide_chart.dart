@@ -1,10 +1,11 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:my_tide_monitor/models/station.dart';
 import 'package:my_tide_monitor/models/tide_point.dart';
 import 'package:my_tide_monitor/services/noaa_service.dart';
+import 'package:my_tide_monitor/services/settings_service.dart';
 import 'package:my_tide_monitor/services/tide_curve.dart';
+import 'package:my_tide_monitor/widgets/settings_scope.dart';
 
 /// How much of the curve the chart shows around "now".
 const Duration _hoursBefore = Duration(hours: 6);
@@ -94,6 +95,7 @@ class TideChartView extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
+    final settings = SettingsScope.of(context);
 
     final nowUtc = now.toUtc();
     final currentHeight = heightAt(curve.points, nowUtc);
@@ -105,19 +107,27 @@ class TideChartView extends StatelessWidget {
     }
     final rising = isRising(curve.points, nowUtc);
 
-    // Only the part of the curve around now, with x in hours from now.
+    // Only the part of the curve around now, with x in hours from now and y
+    // already converted to the unit being shown, so the axis marks fall on
+    // round numbers in that unit.
     final visible = curve.points.where((p) {
       return !p.time.isBefore(nowUtc.subtract(_hoursBefore)) &&
           !p.time.isAfter(nowUtc.add(_hoursAfter));
     }).toList();
     final spots = [
       for (final p in visible)
-        FlSpot(p.time.difference(nowUtc).inMinutes / 60, p.feet),
+        FlSpot(
+          p.time.difference(nowUtc).inMinutes / 60,
+          settings.heightValue(p.feet),
+        ),
     ];
 
-    final heights = visible.map((p) => p.feet);
-    final minY = heights.reduce((a, b) => a < b ? a : b) - 0.5;
-    final maxY = heights.reduce((a, b) => a > b ? a : b) + 0.5;
+    // Half a foot of room above and below the curve, in the shown unit.
+    final padding = settings.heightValue(0.5);
+    final heights = spots.map((s) => s.y);
+    final minY = heights.reduce((a, b) => a < b ? a : b) - padding;
+    final maxY = heights.reduce((a, b) => a > b ? a : b) + padding;
+    final heightDecimals = settings.heightUnit == HeightUnit.feet ? 1 : 2;
 
     return Padding(
       padding: const EdgeInsets.only(top: 16),
@@ -128,7 +138,7 @@ class TideChartView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
-                '${currentHeight.toStringAsFixed(1)} ft',
+                settings.formatHeight(currentHeight),
                 style: textTheme.headlineMedium,
               ),
               const SizedBox(width: 8),
@@ -168,10 +178,12 @@ class TideChartView extends StatelessWidget {
                         if (value == meta.min || value == meta.max) {
                           return const SizedBox.shrink();
                         }
+                        // Whole numbers, unless the marks are closer than 1 unit.
+                        final decimals = meta.appliedInterval < 1 ? 1 : 0;
                         return SideTitleWidget(
                           meta: meta,
                           child: Text(
-                            value.toStringAsFixed(0),
+                            value.toStringAsFixed(decimals),
                             style: textTheme.bodySmall,
                           ),
                         );
@@ -186,7 +198,7 @@ class TideChartView extends StatelessWidget {
                       getTitlesWidget: (value, meta) {
                         final label = value == 0
                             ? 'Now'
-                            : DateFormat('h a').format(
+                            : settings.formatHour(
                                 now.add(Duration(hours: value.round())),
                               );
                         return SideTitleWidget(
@@ -214,8 +226,8 @@ class TideChartView extends StatelessWidget {
                       for (final spot in touched)
                         if (spot.barIndex == 0)
                           LineTooltipItem(
-                            '${DateFormat('EEE h:mm a').format(now.add(Duration(minutes: (spot.x * 60).round())))}\n'
-                            '${spot.y.toStringAsFixed(1)} ft',
+                            '${settings.formatWeekdayClock(now.add(Duration(minutes: (spot.x * 60).round())))}\n'
+                            '${spot.y.toStringAsFixed(heightDecimals)} ${settings.heightSymbol}',
                             TextStyle(color: colors.onInverseSurface),
                           )
                         else
@@ -239,7 +251,7 @@ class TideChartView extends StatelessWidget {
                   ),
                   // A dot on the curve at the current time.
                   LineChartBarData(
-                    spots: [FlSpot(0, currentHeight)],
+                    spots: [FlSpot(0, settings.heightValue(currentHeight))],
                     barWidth: 0,
                     dotData: FlDotData(
                       getDotPainter: (spot, percent, bar, index) =>
@@ -259,13 +271,13 @@ class TideChartView extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               curve.isEstimated
-                  ? 'Predicted height in feet above mean lower low water. '
-                      'Drawn between the predicted high and low tides, so it '
-                      'is approximate. Wind and weather can change the real '
-                      'water level.'
-                  : "Predicted height in feet above mean lower low water, "
-                      "from NOAA's 6-minute predictions. Wind and weather can "
-                      "change the real water level.",
+                  ? 'Predicted height in ${settings.heightWord} above mean '
+                      'lower low water. Drawn between the predicted high and '
+                      'low tides, so it is approximate. Wind and weather can '
+                      'change the real water level.'
+                  : 'Predicted height in ${settings.heightWord} above mean '
+                      "lower low water, from NOAA's 6-minute predictions. "
+                      'Wind and weather can change the real water level.',
               style: textTheme.bodySmall,
             ),
           ],

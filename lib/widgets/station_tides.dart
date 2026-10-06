@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:my_tide_monitor/models/prediction.dart';
 import 'package:my_tide_monitor/services/noaa_service.dart';
+import 'package:my_tide_monitor/widgets/settings_scope.dart';
 
 /// Loads and shows the upcoming tides for one station: the next high and low
 /// as cards, followed by a list of upcoming highs and lows.
@@ -118,6 +119,7 @@ class _TideTimes extends StatelessWidget {
       );
     }
 
+    final settings = SettingsScope.of(context);
     final nextHigh = tides.where((t) => t.isHigh).firstOrNull;
     final nextLow = tides.where((t) => t.isLow).firstOrNull;
     final upcoming = upcomingLimit == null ? tides : tides.take(upcomingLimit!);
@@ -144,9 +146,9 @@ class _TideTimes extends StatelessWidget {
                 tide.isHigh ? Icons.arrow_upward : Icons.arrow_downward,
               ),
               title: Text(tide.isHigh ? 'High tide' : 'Low tide'),
-              subtitle: Text(_formatTime(tide.time)),
+              subtitle: Text(settings.formatDateClock(tide.time.toLocal())),
               trailing: Text(
-                '${tide.value.toStringAsFixed(1)} ft',
+                settings.formatHeight(tide.value),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
@@ -155,7 +157,7 @@ class _TideTimes extends StatelessWidget {
         if (showNotes)
           Text(
             "Times are in your device's time zone. "
-            'Heights are feet above mean lower low water (MLLW).',
+            'Heights are ${settings.heightWord} above mean lower low water (MLLW).',
             style: Theme.of(context).textTheme.bodySmall,
           ),
       ],
@@ -172,6 +174,7 @@ class _NextTideCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final settings = SettingsScope.of(context);
     final local = tide?.time.toLocal();
     return Card(
       child: Padding(
@@ -182,20 +185,16 @@ class _NextTideCard extends StatelessWidget {
             Text(label, style: textTheme.labelLarge),
             const SizedBox(height: 8),
             Text(
-              local == null ? '—' : DateFormat('h:mm a').format(local),
+              local == null ? '—' : settings.formatClock(local),
               style: textTheme.headlineSmall,
             ),
             if (local != null) ...[
               Text(DateFormat('EEE').format(local)),
-              Text('${tide!.value.toStringAsFixed(1)} ft'),
+              Text(settings.formatHeight(tide!.value)),
             ],
           ],
         ),
       ),
     );
   }
-}
-
-String _formatTime(DateTime utc) {
-  return DateFormat('EEE, MMM d • h:mm a').format(utc.toLocal());
 }

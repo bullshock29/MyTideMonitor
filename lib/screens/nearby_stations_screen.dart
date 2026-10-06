@@ -10,6 +10,7 @@ import 'package:my_tide_monitor/services/station_locator.dart';
 import 'package:my_tide_monitor/services/station_repository.dart';
 import 'package:my_tide_monitor/services/tide_comparison.dart';
 import 'package:my_tide_monitor/services/tide_format.dart';
+import 'package:my_tide_monitor/widgets/settings_scope.dart';
 
 /// Upcoming tides for one station. Null when they couldn't be loaded.
 typedef _Tides = Future<List<Prediction>?>;
@@ -90,7 +91,8 @@ class _NearbyStationsScreenState extends State<NearbyStationsScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(32),
                 child: Text(
-                  'No tide stations within ${_maxMiles.round()} miles of '
+                  'No tide stations within '
+                  '${SettingsScope.of(context).formatDistance(_maxMiles, decimals: 0)} of '
                   '${widget.place.description}.\n\n'
                   'NOAA stations cover the US and its territories.',
                   textAlign: TextAlign.center,
@@ -193,6 +195,7 @@ class _NearbyStationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final station = item.station;
+    final settings = SettingsScope.of(context);
     final isFavorite = favoritesService.isFavorite(station.id);
     final setting = guessSetting(station.name);
     final source = _sourceLabel(station);
@@ -206,7 +209,7 @@ class _NearbyStationTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${item.miles.toStringAsFixed(1)} mi away'
+            '${settings.formatDistance(item.miles)} away'
             '${isBestMatch ? ' • Best match' : ''}',
           ),
           if (details.isNotEmpty) Text(details),
@@ -261,6 +264,7 @@ class _TideSummaryState extends State<_TideSummary> {
   @override
   Widget build(BuildContext context) {
     final compareWith = widget.compareWith;
+    final settings = SettingsScope.of(context);
 
     return FutureBuilder<List<List<Prediction>?>>(
       future: _both,
@@ -282,8 +286,8 @@ class _TideSummaryState extends State<_TideSummary> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Next high ${formatTideTime(nextHigh.time)} '
-              '• ${nextHigh.value.toStringAsFixed(1)} ft',
+              'Next high ${formatTideTime(nextHigh.time, settings)} '
+              '• ${settings.formatHeight(nextHigh.value)}',
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             if (comparison != null)
