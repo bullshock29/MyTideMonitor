@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_tide_monitor/screens/menu/find_by_city_screen.dart';
 import 'package:my_tide_monitor/screens/menu/noaa_stations_screen.dart';
-import 'package:my_tide_monitor/screens/menu/profile_screen.dart';
 import 'package:my_tide_monitor/screens/menu/settings_screen.dart';
 
 /// The app's side menu. Put it in the `drawer:` of any Scaffold.
@@ -45,19 +44,14 @@ class AppDrawer extends StatelessWidget {
             onTap: () => _open(context, const FindByCityScreen()),
           ),
           ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Settings'),
-            onTap: () => _open(context, const SettingsScreen()),
-          ),
-          ListTile(
-            leading: const Icon(Icons.person),
-            title: const Text('My Profile'),
-            onTap: () => _open(context, const ProfileScreen()),
-          ),
-          ListTile(
             leading: const Icon(Icons.waves),
             title: const Text('NOAA Stations'),
             onTap: () => _open(context, const NoaaStationsScreen()),
+          ),
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text('Settings'),
+            onTap: () => _open(context, const SettingsScreen()),
           ),
         ],
       ),
