@@ -107,6 +107,39 @@ void main() {
     expect(find.text('Falling'), findsOneWidget);
   });
 
+  testWidgets('shows the water temperature beside the tide height, in the chosen unit', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final settings = SettingsService();
+    final view = TideChartView(
+      curve: _curve(),
+      now: _t('2026-10-06 19:00'),
+      waterTemperatureCelsius: 22,
+    );
+
+    await tester.pumpWidget(_app(view, settings: settings));
+    expect(find.text('72°F'), findsOneWidget); // 22°C
+    expect(find.text('Water temp'), findsOneWidget);
+    expect(find.text('Tide height now'), findsOneWidget); // still there
+
+    // Changing the unit updates the temperature in place.
+    await settings.setTemperatureUnit(TemperatureUnit.celsius);
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.text('22°C'), findsOneWidget);
+    expect(find.text('72°F'), findsNothing);
+  });
+
+  testWidgets('no water temperature means no temperature is shown', (tester) async {
+    await tester.pumpWidget(_app(TideChartView(
+      curve: _curve(),
+      now: _t('2026-10-06 19:00'),
+    )));
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Water temp'), findsNothing);
+    expect(find.text('Tide height now'), findsOneWidget);
+  });
+
   testWidgets('says so when the curve does not cover now', (tester) async {
     await tester.pumpWidget(_app(TideChartView(
       curve: _curve(),

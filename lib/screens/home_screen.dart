@@ -8,8 +8,7 @@ import 'package:my_tide_monitor/services/favorites_service.dart';
 import 'package:my_tide_monitor/services/station_repository.dart';
 import 'package:my_tide_monitor/widgets/app_drawer.dart';
 import 'package:my_tide_monitor/widgets/station_tides.dart';
-import 'package:my_tide_monitor/widgets/station_waves.dart';
-import 'package:my_tide_monitor/widgets/tide_chart.dart';
+import 'package:my_tide_monitor/widgets/station_conditions.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -207,13 +206,7 @@ class _FavoriteStationCard extends StatelessWidget {
               // The home screen is a quick glance, so it leaves out the
               // explanatory notes. The detail screen keeps them.
               showNotes: false,
-              belowNextTides: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  StationWaves(station: station, showNotes: false),
-                  TideChart(station: station, showNotes: false),
-                ],
-              ),
+              belowNextTides: StationConditions(station: station, showNotes: false),
             ),
           ),
         ],

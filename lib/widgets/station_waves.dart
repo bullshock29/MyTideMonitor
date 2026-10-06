@@ -1,61 +1,42 @@
 import 'package:flutter/material.dart';
-import 'package:my_tide_monitor/models/station.dart';
+import 'package:my_tide_monitor/models/marine_conditions.dart';
 import 'package:my_tide_monitor/models/wave_conditions.dart';
-import 'package:my_tide_monitor/services/station_hint.dart';
-import 'package:my_tide_monitor/services/wave_service.dart';
 import 'package:my_tide_monitor/services/wave_size.dart';
 import 'package:my_tide_monitor/widgets/settings_scope.dart';
 
 /// How big the waves are near a station: the size now, with a plain word for
 /// it, and the range over the next day.
 ///
-/// Shows nothing when there's nothing trustworthy to say: for stations on
-/// waterways (the model would report the open ocean beyond them), where the
-/// model has no waves (inland places), or when the request fails.
-class StationWaves extends StatefulWidget {
-  final Station station;
+/// It shows what is in [marine], which `StationConditions` loads once and
+/// shares with the tide chart. It shows nothing when there is nothing
+/// trustworthy to say: no marine data was requested (waterway stations), the
+/// model has no waves (inland places), or the request failed.
+class StationWaves extends StatelessWidget {
+  /// The marine data being loaded, or null when none was requested.
+  final Future<MarineConditions?>? marine;
 
   /// Whether to show the small "open-water estimate" explanation. The home
   /// screen leaves it out to save space.
   final bool showNotes;
 
-  const StationWaves({super.key, required this.station, this.showNotes = true});
-
-  @override
-  State<StationWaves> createState() => _StationWavesState();
-}
-
-class _StationWavesState extends State<StationWaves> {
-  Future<WaveConditions?>? _waves;
-
-  bool get _isWaterway => guessSetting(widget.station.name) == StationSetting.waterway;
-
-  @override
-  void initState() {
-    super.initState();
-    if (!_isWaterway) {
-      _waves = WaveService().getWaves(
-        widget.station.latitude,
-        widget.station.longitude,
-      );
-    }
-  }
+  const StationWaves({super.key, required this.marine, this.showNotes = true});
 
   @override
   Widget build(BuildContext context) {
-    final waves = _waves;
-    if (waves == null) return const SizedBox.shrink();
+    final marine = this.marine;
+    if (marine == null) return const SizedBox.shrink();
 
-    return FutureBuilder<WaveConditions?>(
-      future: waves,
+    return FutureBuilder<MarineConditions?>(
+      future: marine,
       builder: (context, snapshot) {
-        final conditions = snapshot.data;
         if (snapshot.connectionState != ConnectionState.done) {
           return const Padding(
             padding: EdgeInsets.only(top: 16),
             child: Text('Checking waves…'),
           );
         }
+
+        final WaveConditions? conditions = snapshot.data?.waves;
         if (conditions == null) return const SizedBox.shrink(); // error or no data
 
         final textTheme = Theme.of(context).textTheme;
@@ -82,7 +63,7 @@ class _StationWavesState extends State<StationWaves> {
                     Text(
                       'Next 24 hours: ${formatWaveRange(conditions.next24HoursMinFeet, conditions.next24HoursMaxFeet, settings)}',
                     ),
-                    if (widget.showNotes)
+                    if (showNotes)
                       Text(
                         'Open-water estimate. Surf at the beach can be '
                         'smaller or larger.',

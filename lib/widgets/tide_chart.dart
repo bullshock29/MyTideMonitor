@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:my_tide_monitor/models/marine_conditions.dart';
 import 'package:my_tide_monitor/models/station.dart';
 import 'package:my_tide_monitor/models/tide_point.dart';
 import 'package:my_tide_monitor/services/noaa_service.dart';
@@ -17,11 +18,22 @@ const Duration _hoursAfter = Duration(hours: 24);
 class TideChart extends StatefulWidget {
   final Station station;
 
+  /// Marine data being loaded for this station, used for the water
+  /// temperature shown beside the tide height. Null when there is none (for
+  /// example waterway stations), in which case no temperature is shown. The
+  /// chart never waits for it.
+  final Future<MarineConditions?>? marine;
+
   /// Whether to show the explanation under the chart (what the height means
   /// and how it was drawn). The home screen leaves it out to save space.
   final bool showNotes;
 
-  const TideChart({super.key, required this.station, this.showNotes = true});
+  const TideChart({
+    super.key,
+    required this.station,
+    this.marine,
+    this.showNotes = true,
+  });
 
   @override
   State<TideChart> createState() => _TideChartState();
@@ -63,10 +75,16 @@ class _TideChartState extends State<TideChart> {
           );
         }
 
-        return TideChartView(
-          curve: snapshot.data!,
-          now: DateTime.now(),
-          showNotes: widget.showNotes,
+        // The water temperature fills in when the marine data arrives; until
+        // then (or if it never does) the chart simply has no temperature.
+        return FutureBuilder<MarineConditions?>(
+          future: widget.marine,
+          builder: (context, marineSnapshot) => TideChartView(
+            curve: snapshot.data!,
+            now: DateTime.now(),
+            showNotes: widget.showNotes,
+            waterTemperatureCelsius: marineSnapshot.data?.waterTemperatureCelsius,
+          ),
         );
       },
     );
@@ -84,11 +102,16 @@ class TideChartView extends StatelessWidget {
   /// Whether to show the explanation under the chart.
   final bool showNotes;
 
+  /// The water temperature in °C, shown on the right of the heading. Null
+  /// leaves it out.
+  final double? waterTemperatureCelsius;
+
   const TideChartView({
     super.key,
     required this.curve,
     required this.now,
     this.showNotes = true,
+    this.waterTemperatureCelsius,
   });
 
   @override
@@ -134,21 +157,49 @@ class TideChartView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // The heading: tide height on the left, water temperature on the
+          // right.
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                settings.formatHeight(currentHeight),
-                style: textTheme.headlineMedium,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          settings.formatHeight(currentHeight),
+                          style: textTheme.headlineMedium,
+                        ),
+                        const SizedBox(width: 8),
+                        if (rising != null) ...[
+                          Icon(rising ? Icons.arrow_upward : Icons.arrow_downward),
+                          Text(
+                            rising ? 'Rising' : 'Falling',
+                            style: textTheme.titleMedium,
+                          ),
+                        ],
+                      ],
+                    ),
+                    Text('Tide height now', style: textTheme.bodySmall),
+                  ],
+                ),
               ),
-              const SizedBox(width: 8),
-              if (rising != null) ...[
-                Icon(rising ? Icons.arrow_upward : Icons.arrow_downward),
-                Text(rising ? 'Rising' : 'Falling', style: textTheme.titleMedium),
-              ],
+              if (waterTemperatureCelsius != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      settings.formatTemperature(waterTemperatureCelsius!),
+                      style: textTheme.headlineMedium,
+                    ),
+                    Text('Water temp', style: textTheme.bodySmall),
+                  ],
+                ),
             ],
           ),
-          Text('Tide height now', style: textTheme.bodySmall),
           const SizedBox(height: 16),
           SizedBox(
             height: 200,
