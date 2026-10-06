@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_tide_monitor/widgets/app_drawer.dart';
+import 'package:my_tide_monitor/widgets/home_button.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -7,7 +8,11 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(leading: const MenuButton(), title: const Text('My Profile')),
+      appBar: AppBar(
+        leading: const MenuButton(),
+        title: const Text('My Profile'),
+        actions: const [HomeButton()],
+      ),
       drawer: const AppDrawer(),
       body: const SizedBox.shrink(),
     );

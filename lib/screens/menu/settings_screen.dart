@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:my_tide_monitor/services/settings_service.dart';
+import 'package:my_tide_monitor/theme/app_theme.dart';
 import 'package:my_tide_monitor/widgets/app_drawer.dart';
+import 'package:my_tide_monitor/widgets/home_button.dart';
 import 'package:my_tide_monitor/widgets/settings_scope.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -13,11 +15,50 @@ class SettingsScreen extends StatelessWidget {
     final settings = SettingsScope.of(context);
 
     return Scaffold(
-      appBar: AppBar(leading: const MenuButton(), title: const Text('Settings')),
+      appBar: AppBar(
+        leading: const MenuButton(),
+        title: const Text('Settings'),
+        actions: const [HomeButton()],
+      ),
       drawer: const AppDrawer(),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
+          _SectionHeader('Appearance'),
+          _ToggleSetting<AppearanceMode>(
+            title: 'Mode',
+            note: 'System follows your phone\'s light or dark setting.',
+            value: settings.appearanceMode,
+            options: const {
+              AppearanceMode.system: 'System',
+              AppearanceMode.light: 'Light',
+              AppearanceMode.dark: 'Dark',
+            },
+            icons: const {
+              AppearanceMode.system: Icon(Icons.brightness_auto),
+              AppearanceMode.light: Icon(Icons.light_mode),
+              AppearanceMode.dark: Icon(Icons.dark_mode),
+            },
+            onChanged: settings.setAppearanceMode,
+          ),
+          _ToggleSetting<AppColor>(
+            title: 'Color',
+            note: 'Used for the app bar, buttons, and the tide chart.',
+            value: settings.appColor,
+            options: const {
+              AppColor.blue: 'Blue',
+              AppColor.green: 'Green',
+              AppColor.orange: 'Orange',
+            },
+            // A dot in each color, so the choices can be told apart at a
+            // glance.
+            icons: {
+              for (final entry in appSeedColors.entries)
+                entry.key: Icon(Icons.circle, color: entry.value),
+            },
+            onChanged: settings.setAppColor,
+          ),
+          const Divider(),
           _SectionHeader('Units'),
           _ToggleSetting<TemperatureUnit>(
             title: 'Temperature',
@@ -91,18 +132,30 @@ class _SectionHeader extends StatelessWidget {
 /// choice highlighted, and a line below showing what it looks like.
 class _ToggleSetting<T> extends StatelessWidget {
   final String title;
-  final String example;
+
+  /// A line showing what the setting looks like, like "Example: 72°F".
+  /// Used by the unit settings.
+  final String? example;
+
+  /// A line explaining the setting, for ones with nothing to show as an
+  /// example.
+  final String? note;
   final T value;
 
   /// The choices, in order, with the text for each button.
   final Map<T, String> options;
+
+  /// An optional icon for each choice, shown beside its text.
+  final Map<T, Widget>? icons;
   final ValueChanged<T> onChanged;
 
   const _ToggleSetting({
     required this.title,
-    required this.example,
+    this.example,
+    this.note,
     required this.value,
     required this.options,
+    this.icons,
     required this.onChanged,
   });
 
@@ -121,14 +174,20 @@ class _ToggleSetting<T> extends StatelessWidget {
               showSelectedIcon: false,
               segments: [
                 for (final option in options.entries)
-                  ButtonSegment<T>(value: option.key, label: Text(option.value)),
+                  ButtonSegment<T>(
+                    value: option.key,
+                    label: Text(option.value),
+                    icon: icons?[option.key],
+                  ),
               ],
               selected: {value},
               onSelectionChanged: (selection) => onChanged(selection.first),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(example, style: Theme.of(context).textTheme.bodySmall),
+          if (example != null || note != null) ...[
+            const SizedBox(height: 4),
+            Text(example ?? note!, style: Theme.of(context).textTheme.bodySmall),
+          ],
         ],
       ),
     );

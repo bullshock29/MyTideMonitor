@@ -18,6 +18,11 @@ void main() {
     expect(settings.timeFormat, TimeFormat.twelveHour);
   });
 
+  test('the theme defaults to blue, following the phone', () {
+    expect(settings.appearanceMode, AppearanceMode.system);
+    expect(settings.appColor, AppColor.blue);
+  });
+
   group('heights', () {
     test('feet', () {
       expect(settings.formatHeight(5.4), '5.4 ft');
@@ -102,6 +107,8 @@ void main() {
       await settings.setDistanceUnit(DistanceUnit.kilometers);
       await settings.setHeightUnit(HeightUnit.meters);
       await settings.setTimeFormat(TimeFormat.twentyFourHour);
+      await settings.setAppearanceMode(AppearanceMode.dark);
+      await settings.setAppColor(AppColor.orange);
 
       final reloaded = SettingsService();
       await reloaded.load();
@@ -109,6 +116,8 @@ void main() {
       expect(reloaded.distanceUnit, DistanceUnit.kilometers);
       expect(reloaded.heightUnit, HeightUnit.meters);
       expect(reloaded.timeFormat, TimeFormat.twentyFourHour);
+      expect(reloaded.appearanceMode, AppearanceMode.dark);
+      expect(reloaded.appColor, AppColor.orange);
     });
 
     test('an unrecognised saved value falls back to the default', () async {

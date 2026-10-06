@@ -10,6 +10,12 @@ enum HeightUnit { feet, meters }
 
 enum TimeFormat { twelveHour, twentyFourHour }
 
+/// Light or dark. [system] follows the phone's own setting.
+enum AppearanceMode { system, light, dark }
+
+/// The color the app is themed in.
+enum AppColor { blue, green, orange }
+
 const double _metersPerFoot = 0.3048;
 const double _kilometersPerMile = 1.609344;
 
@@ -27,17 +33,23 @@ class SettingsService extends ChangeNotifier {
   static const String _distanceKey = 'setting_distance_unit';
   static const String _heightKey = 'setting_height_unit';
   static const String _timeKey = 'setting_time_format';
+  static const String _appearanceKey = 'setting_appearance_mode';
+  static const String _colorKey = 'setting_app_color';
 
   // Defaults suit the US coasts that NOAA covers.
   TemperatureUnit _temperatureUnit = TemperatureUnit.fahrenheit;
   DistanceUnit _distanceUnit = DistanceUnit.miles;
   HeightUnit _heightUnit = HeightUnit.feet;
   TimeFormat _timeFormat = TimeFormat.twelveHour;
+  AppearanceMode _appearanceMode = AppearanceMode.system;
+  AppColor _appColor = AppColor.blue;
 
   TemperatureUnit get temperatureUnit => _temperatureUnit;
   DistanceUnit get distanceUnit => _distanceUnit;
   HeightUnit get heightUnit => _heightUnit;
   TimeFormat get timeFormat => _timeFormat;
+  AppearanceMode get appearanceMode => _appearanceMode;
+  AppColor get appColor => _appColor;
 
   /// Loads the saved choices. Call once at startup, before `runApp`.
   Future<void> load() async {
@@ -61,6 +73,16 @@ class SettingsService extends ChangeNotifier {
       TimeFormat.values,
       prefs.getString(_timeKey),
       _timeFormat,
+    );
+    _appearanceMode = _read(
+      AppearanceMode.values,
+      prefs.getString(_appearanceKey),
+      _appearanceMode,
+    );
+    _appColor = _read(
+      AppColor.values,
+      prefs.getString(_colorKey),
+      _appColor,
     );
     notifyListeners();
   }
@@ -97,6 +119,20 @@ class SettingsService extends ChangeNotifier {
     _timeFormat = format;
     notifyListeners();
     await _save(_timeKey, format.name);
+  }
+
+  Future<void> setAppearanceMode(AppearanceMode mode) async {
+    if (mode == _appearanceMode) return;
+    _appearanceMode = mode;
+    notifyListeners();
+    await _save(_appearanceKey, mode.name);
+  }
+
+  Future<void> setAppColor(AppColor color) async {
+    if (color == _appColor) return;
+    _appColor = color;
+    notifyListeners();
+    await _save(_colorKey, color.name);
   }
 
   // The screen updates right away; saving happens in the background.

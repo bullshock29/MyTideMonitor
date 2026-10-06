@@ -9,6 +9,7 @@ import 'package:my_tide_monitor/services/station_locator.dart';
 import 'package:my_tide_monitor/services/station_picker.dart';
 import 'package:my_tide_monitor/services/station_repository.dart';
 import 'package:my_tide_monitor/services/tide_format.dart';
+import 'package:my_tide_monitor/widgets/home_button.dart';
 import 'package:my_tide_monitor/widgets/settings_scope.dart';
 import 'package:my_tide_monitor/widgets/station_tides.dart';
 
@@ -92,7 +93,10 @@ class _PlaceTidesScreenState extends State<PlaceTidesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.place.name)),
+      appBar: AppBar(
+        title: Text(widget.place.name),
+        actions: const [HomeButton()],
+      ),
       body: FutureBuilder<_Outcome>(
         future: _outcome,
         builder: (context, snapshot) {

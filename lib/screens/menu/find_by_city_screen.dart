@@ -6,6 +6,7 @@ import 'package:my_tide_monitor/screens/place_tides_screen.dart';
 import 'package:my_tide_monitor/services/geocoding_service.dart';
 import 'package:my_tide_monitor/services/location_service.dart';
 import 'package:my_tide_monitor/widgets/app_drawer.dart';
+import 'package:my_tide_monitor/widgets/home_button.dart';
 
 /// Find a location: search for a city or place by name, or use the phone's
 /// current location. Either way, the next screen picks the tide station.
@@ -125,6 +126,7 @@ class _FindByCityScreenState extends State<FindByCityScreen> {
       appBar: AppBar(
         leading: const MenuButton(),
         title: const Text('Find a Location'),
+        actions: const [HomeButton()],
       ),
       drawer: const AppDrawer(),
       body: Column(

@@ -11,7 +11,9 @@ void main() {
   Future<void> openScreen(WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
     settings = SettingsService();
-    tester.view.physicalSize = const Size(800, 1600);
+    // Tall enough that every setting is on screen (lists only build what is
+    // visible).
+    tester.view.physicalSize = const Size(800, 3200);
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
 
@@ -56,6 +58,30 @@ void main() {
     await tester.pump();
     expect(settings.timeFormat, TimeFormat.twentyFourHour);
     expect(find.text('Example: 16:48'), findsOneWidget);
+  });
+
+  testWidgets('the appearance settings change the mode and the color', (tester) async {
+    await openScreen(tester);
+
+    expect(find.text('Appearance'), findsOneWidget);
+    expect(settings.appearanceMode, AppearanceMode.system);
+    expect(settings.appColor, AppColor.blue);
+
+    await tester.tap(find.text('Dark'));
+    await tester.pump();
+    expect(settings.appearanceMode, AppearanceMode.dark);
+
+    await tester.tap(find.text('Light'));
+    await tester.pump();
+    expect(settings.appearanceMode, AppearanceMode.light);
+
+    await tester.tap(find.text('Green'));
+    await tester.pump();
+    expect(settings.appColor, AppColor.green);
+
+    await tester.tap(find.text('Orange'));
+    await tester.pump();
+    expect(settings.appColor, AppColor.orange);
   });
 
   testWidgets('tapping the choice that is already selected changes nothing', (tester) async {

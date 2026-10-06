@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:my_tide_monitor/models/station.dart';
 import 'package:my_tide_monitor/models/us_states.dart';
 import 'package:my_tide_monitor/services/favorites_service.dart';
+import 'package:my_tide_monitor/widgets/home_button.dart';
 import 'package:my_tide_monitor/widgets/station_conditions.dart';
 import 'package:my_tide_monitor/widgets/station_tides.dart';
 
@@ -29,6 +30,7 @@ class StationDetailScreen extends StatelessWidget {
               );
             },
           ),
+          const HomeButton(),
         ],
       ),
       body: ListView(

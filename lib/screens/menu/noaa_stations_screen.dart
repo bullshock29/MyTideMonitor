@@ -5,6 +5,7 @@ import 'package:my_tide_monitor/screens/station_detail_screen.dart';
 import 'package:my_tide_monitor/services/favorites_service.dart';
 import 'package:my_tide_monitor/services/station_repository.dart';
 import 'package:my_tide_monitor/widgets/app_drawer.dart';
+import 'package:my_tide_monitor/widgets/home_button.dart';
 
 /// A titled section of the station list.
 class _StationGroup {
@@ -103,6 +104,7 @@ class _NoaaStationsScreenState extends State<NoaaStationsScreen> {
       appBar: AppBar(
         leading: const MenuButton(),
         title: const Text('NOAA Stations'),
+        actions: const [HomeButton()],
       ),
       drawer: const AppDrawer(),
       body: Column(
