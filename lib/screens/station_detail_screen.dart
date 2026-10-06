@@ -3,6 +3,7 @@ import 'package:my_tide_monitor/models/station.dart';
 import 'package:my_tide_monitor/models/us_states.dart';
 import 'package:my_tide_monitor/services/favorites_service.dart';
 import 'package:my_tide_monitor/widgets/home_button.dart';
+import 'package:my_tide_monitor/widgets/rename_dialog.dart';
 import 'package:my_tide_monitor/widgets/station_conditions.dart';
 import 'package:my_tide_monitor/widgets/station_tides.dart';
 
@@ -17,16 +18,32 @@ class StationDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(station.name),
+        // Shows the user's own name for the station, if it has one.
+        title: ListenableBuilder(
+          listenable: favoritesService,
+          builder: (context, _) => Text(favoritesService.displayName(station)),
+        ),
         actions: [
           ListenableBuilder(
             listenable: favoritesService,
             builder: (context, _) {
               final isFavorite = favoritesService.isFavorite(station.id);
-              return IconButton(
-                icon: Icon(isFavorite ? Icons.star : Icons.star_border),
-                tooltip: isFavorite ? 'Remove favorite' : 'Add favorite',
-                onPressed: () => favoritesService.toggle(station.id),
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Only favorites can be renamed.
+                  if (isFavorite)
+                    IconButton(
+                      icon: const Icon(Icons.edit),
+                      tooltip: 'Rename',
+                      onPressed: () => showRenameDialog(context, station),
+                    ),
+                  IconButton(
+                    icon: Icon(isFavorite ? Icons.star : Icons.star_border),
+                    tooltip: isFavorite ? 'Remove favorite' : 'Add favorite',
+                    onPressed: () => favoritesService.toggle(station.id),
+                  ),
+                ],
               );
             },
           ),
@@ -36,6 +53,22 @@ class StationDetailScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // A renamed location says which NOAA station it really is.
+          ListenableBuilder(
+            listenable: favoritesService,
+            builder: (context, _) {
+              if (favoritesService.customName(station.id) == null) {
+                return const SizedBox.shrink();
+              }
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  station.name,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              );
+            },
+          ),
           Text(
             [
               if (hasState) stateName(station.state!),

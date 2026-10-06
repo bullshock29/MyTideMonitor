@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:my_tide_monitor/models/station.dart';
 import 'package:my_tide_monitor/services/favorites_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -9,6 +10,128 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     service = FavoritesService();
     await service.load();
+  });
+
+  group('custom names', () {
+    final pier = Station(
+      id: 'pier',
+      name: 'Springmaid Pier, Myrtle beach',
+      latitude: 0,
+      longitude: 0,
+    );
+    final bridge = Station(
+      id: 'bridge',
+      name: 'Combination Bridge',
+      latitude: 0,
+      longitude: 0,
+    );
+
+    setUp(() async {
+      await service.toggle('pier');
+      await service.toggle('bridge');
+    });
+
+    test('a favorite with no custom name shows the station name', () {
+      expect(service.customName('pier'), isNull);
+      expect(service.displayName(pier), 'Springmaid Pier, Myrtle beach');
+    });
+
+    test('renaming changes what is displayed, only for that location', () async {
+      await service.rename(pier, 'The Beach');
+      expect(service.customName('pier'), 'The Beach');
+      expect(service.displayName(pier), 'The Beach');
+      expect(service.displayName(bridge), 'Combination Bridge');
+    });
+
+    test('the name is trimmed', () async {
+      await service.rename(pier, '   The Beach  ');
+      expect(service.displayName(pier), 'The Beach');
+    });
+
+    test('a blank name goes back to the station name', () async {
+      await service.rename(pier, 'The Beach');
+      await service.rename(pier, '   ');
+      expect(service.customName('pier'), isNull);
+      expect(service.displayName(pier), 'Springmaid Pier, Myrtle beach');
+    });
+
+    test('null goes back to the station name too', () async {
+      await service.rename(pier, 'The Beach');
+      await service.rename(pier, null);
+      expect(service.customName('pier'), isNull);
+    });
+
+    test("typing the station's own name is not stored as a custom name", () async {
+      await service.rename(pier, 'The Beach');
+      await service.rename(pier, 'Springmaid Pier, Myrtle beach');
+      expect(service.customName('pier'), isNull);
+    });
+
+    test('a very long name is cut to the limit', () async {
+      await service.rename(pier, 'x' * 100);
+      expect(service.customName('pier')!.length, FavoritesService.maxNameLength);
+    });
+
+    test('a station that is not a favorite cannot be renamed', () async {
+      final other = Station(id: 'other', name: 'Other', latitude: 0, longitude: 0);
+      await service.rename(other, 'Nope');
+      expect(service.customName('other'), isNull);
+    });
+
+    test('unstarring forgets the name', () async {
+      await service.rename(pier, 'The Beach');
+      await service.toggle('pier'); // unstar
+      await service.toggle('pier'); // star again
+      expect(service.customName('pier'), isNull);
+    });
+
+    test('reordering keeps each name with its location', () async {
+      await service.rename(pier, 'The Beach');
+      await service.reorder(0, 1);
+      expect(service.ids, ['bridge', 'pier']);
+      expect(service.displayName(pier), 'The Beach');
+    });
+
+    test('names survive a restart', () async {
+      await service.rename(pier, 'The Beach');
+
+      final reloaded = FavoritesService();
+      await reloaded.load();
+      expect(reloaded.displayName(pier), 'The Beach');
+      expect(reloaded.customName('bridge'), isNull);
+    });
+
+    test('a name saved for a station that is no longer a favorite is ignored', () async {
+      SharedPreferences.setMockInitialValues({
+        'favorite_station_ids': ['pier'],
+        'favorite_station_names': '{"pier":"The Beach","gone":"Old Name"}',
+      });
+      final reloaded = FavoritesService();
+      await reloaded.load();
+      expect(reloaded.customName('pier'), 'The Beach');
+      expect(reloaded.customName('gone'), isNull);
+    });
+
+    test('unreadable saved names are dropped without losing the favorites', () async {
+      SharedPreferences.setMockInitialValues({
+        'favorite_station_ids': ['pier', 'bridge'],
+        'favorite_station_names': 'this is not json',
+      });
+      final reloaded = FavoritesService();
+      await reloaded.load();
+      expect(reloaded.ids, ['pier', 'bridge']);
+      expect(reloaded.customName('pier'), isNull);
+    });
+
+    test('listeners hear about a rename, but not about no change', () async {
+      var calls = 0;
+      service.addListener(() => calls++);
+
+      await service.rename(pier, 'The Beach');
+      expect(calls, 1);
+      await service.rename(pier, 'The Beach'); // same name
+      expect(calls, 1);
+    });
   });
 
   test('new favorites are added to the end', () async {

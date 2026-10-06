@@ -8,6 +8,7 @@ import 'package:my_tide_monitor/services/favorites_service.dart';
 import 'package:my_tide_monitor/services/station_repository.dart';
 import 'package:my_tide_monitor/widgets/app_drawer.dart';
 import 'package:my_tide_monitor/widgets/station_tides.dart';
+import 'package:my_tide_monitor/widgets/rename_dialog.dart';
 import 'package:my_tide_monitor/widgets/station_conditions.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -152,7 +153,7 @@ class _HomeScreenState extends State<HomeScreen> {
           key: ValueKey(station.id),
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
-            title: Text(station.name),
+            title: Text(favoritesService.displayName(station)),
             subtitle: hasState ? Text(stateName(station.state!)) : null,
             // Dragging starts as soon as the handle is touched.
             trailing: ReorderableDragStartListener(
@@ -174,6 +175,7 @@ class _FavoriteStationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasState = station.state != null && station.state!.isNotEmpty;
+    final isRenamed = favoritesService.customName(station.id) != null;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -181,14 +183,34 @@ class _FavoriteStationCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ListTile(
-            title: Text(station.name),
+            title: Text(favoritesService.displayName(station)),
+            // A renamed location says which NOAA station it really is.
             subtitle: Text(
-              [
-                if (hasState) stateName(station.state!),
-                'Station ${station.id}',
-              ].join(' • '),
+              isRenamed
+                  ? station.name
+                  : [
+                      if (hasState) stateName(station.state!),
+                      'Station ${station.id}',
+                    ].join(' • '),
             ),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: PopupMenuButton<String>(
+              tooltip: 'More',
+              onSelected: (choice) {
+                if (choice == 'rename') {
+                  showRenameDialog(context, station);
+                } else if (choice == 'reset') {
+                  favoritesService.rename(station, null);
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(value: 'rename', child: Text('Rename')),
+                if (isRenamed)
+                  const PopupMenuItem(
+                    value: 'reset',
+                    child: Text('Use station name'),
+                  ),
+              ],
+            ),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
