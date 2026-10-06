@@ -5,6 +5,7 @@ import 'package:my_tide_monitor/screens/station_detail_screen.dart';
 import 'package:my_tide_monitor/services/favorites_service.dart';
 import 'package:my_tide_monitor/services/station_repository.dart';
 import 'package:my_tide_monitor/widgets/app_drawer.dart';
+import 'package:my_tide_monitor/widgets/favorite_star_button.dart';
 import 'package:my_tide_monitor/widgets/home_button.dart';
 
 /// A titled section of the station list.
@@ -258,16 +259,10 @@ class _StationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isFavorite = favoritesService.isFavorite(station.id);
     return ListTile(
       title: Text(station.name),
       subtitle: Text('ID ${station.id}'),
-      trailing: IconButton(
-        icon: Icon(isFavorite ? Icons.star : Icons.star_border),
-        color: isFavorite ? Colors.amber : null,
-        tooltip: isFavorite ? 'Remove favorite' : 'Add favorite',
-        onPressed: () => favoritesService.toggle(station.id),
-      ),
+      trailing: FavoriteStarButton(stationId: station.id),
       onTap: onTap,
     );
   }

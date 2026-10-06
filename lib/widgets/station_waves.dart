@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:my_tide_monitor/models/marine_conditions.dart';
 import 'package:my_tide_monitor/models/wave_conditions.dart';
+import 'package:my_tide_monitor/services/tide_format.dart';
 import 'package:my_tide_monitor/services/wave_size.dart';
 import 'package:my_tide_monitor/widgets/settings_scope.dart';
 
@@ -36,10 +37,14 @@ class StationWaves extends StatelessWidget {
           );
         }
 
-        final WaveConditions? conditions = snapshot.data?.waves;
-        if (conditions == null) return const SizedBox.shrink(); // error or no data
+        final marineData = snapshot.data;
+        final WaveConditions? conditions = marineData?.waves;
+        if (marineData == null || conditions == null) {
+          return const SizedBox.shrink(); // error or no data
+        }
 
         final textTheme = Theme.of(context).textTheme;
+        final colors = Theme.of(context).colorScheme;
         final settings = SettingsScope.of(context);
         return Padding(
           padding: const EdgeInsets.only(top: 16),
@@ -63,6 +68,23 @@ class StationWaves extends StatelessWidget {
                     Text(
                       'Next 24 hours: ${formatWaveRange(conditions.next24HoursMinFeet, conditions.next24HoursMaxFeet, settings)}',
                     ),
+                    // Waves are a forecast that changes, so a saved copy has
+                    // to say how old it is, even on the quick-glance home
+                    // screen.
+                    if (marineData.fromCache)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Row(
+                          children: [
+                            Icon(Icons.cloud_off, size: 14, color: colors.error),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Offline • as of ${formatAge(DateTime.now().difference(marineData.fetchedAt))}',
+                              style: textTheme.bodySmall?.copyWith(color: colors.error),
+                            ),
+                          ],
+                        ),
+                      ),
                     if (showNotes)
                       Text(
                         'Open-water estimate. Surf at the beach can be '

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:my_tide_monitor/models/station.dart';
+import 'package:my_tide_monitor/models/station_text.dart';
 import 'package:my_tide_monitor/models/us_states.dart';
 import 'package:my_tide_monitor/screens/menu/find_by_city_screen.dart';
 import 'package:my_tide_monitor/screens/station_detail_screen.dart';
@@ -172,9 +173,30 @@ class _FavoriteStationCard extends StatelessWidget {
 
   const _FavoriteStationCard({required this.station});
 
+  // Removes the card, with an Undo, since a tap on the wrong menu item
+  // shouldn't cost the user their saved location and its custom name.
+  Future<void> _remove(BuildContext context) async {
+    // Grab these first: once the card is removed this widget goes away, and
+    // its context can't be used any more.
+    final messenger = ScaffoldMessenger.of(context);
+    final name = favoritesService.displayName(station);
+
+    final removed = await favoritesService.remove(station.id);
+    if (removed == null) return;
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('Removed $name'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () => favoritesService.restore(removed),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final hasState = station.state != null && station.state!.isNotEmpty;
     final isRenamed = favoritesService.customName(station.id) != null;
 
     return Card(
@@ -185,21 +207,17 @@ class _FavoriteStationCard extends StatelessWidget {
           ListTile(
             title: Text(favoritesService.displayName(station)),
             // A renamed location says which NOAA station it really is.
-            subtitle: Text(
-              isRenamed
-                  ? station.name
-                  : [
-                      if (hasState) stateName(station.state!),
-                      'Station ${station.id}',
-                    ].join(' • '),
-            ),
+            subtitle: Text(isRenamed ? station.name : station.stateAndId),
             trailing: PopupMenuButton<String>(
               tooltip: 'More',
               onSelected: (choice) {
-                if (choice == 'rename') {
-                  showRenameDialog(context, station);
-                } else if (choice == 'reset') {
-                  favoritesService.rename(station, null);
+                switch (choice) {
+                  case 'rename':
+                    showRenameDialog(context, station);
+                  case 'reset':
+                    favoritesService.rename(station, null);
+                  case 'remove':
+                    _remove(context);
                 }
               },
               itemBuilder: (context) => [
@@ -209,6 +227,10 @@ class _FavoriteStationCard extends StatelessWidget {
                     value: 'reset',
                     child: Text('Use station name'),
                   ),
+                const PopupMenuItem(
+                  value: 'remove',
+                  child: Text('Remove from home'),
+                ),
               ],
             ),
             onTap: () => Navigator.push(

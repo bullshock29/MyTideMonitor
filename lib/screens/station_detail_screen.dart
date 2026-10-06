@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:my_tide_monitor/models/station.dart';
-import 'package:my_tide_monitor/models/us_states.dart';
+import 'package:my_tide_monitor/models/station_text.dart';
 import 'package:my_tide_monitor/services/favorites_service.dart';
+import 'package:my_tide_monitor/widgets/favorite_star_button.dart';
 import 'package:my_tide_monitor/widgets/home_button.dart';
 import 'package:my_tide_monitor/widgets/rename_dialog.dart';
 import 'package:my_tide_monitor/widgets/station_conditions.dart';
@@ -14,8 +15,6 @@ class StationDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasState = station.state != null && station.state!.isNotEmpty;
-
     return Scaffold(
       appBar: AppBar(
         // Shows the user's own name for the station, if it has one.
@@ -38,11 +37,8 @@ class StationDetailScreen extends StatelessWidget {
                       tooltip: 'Rename',
                       onPressed: () => showRenameDialog(context, station),
                     ),
-                  IconButton(
-                    icon: Icon(isFavorite ? Icons.star : Icons.star_border),
-                    tooltip: isFavorite ? 'Remove favorite' : 'Add favorite',
-                    onPressed: () => favoritesService.toggle(station.id),
-                  ),
+                  // No amber here: it would clash with the app bar color.
+                  FavoriteStarButton(stationId: station.id, starredColor: null),
                 ],
               );
             },
@@ -70,10 +66,7 @@ class StationDetailScreen extends StatelessWidget {
             },
           ),
           Text(
-            [
-              if (hasState) stateName(station.state!),
-              'Station ${station.id}',
-            ].join(' • '),
+            station.stateAndId,
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           const SizedBox(height: 4),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:my_tide_monitor/models/fetched.dart';
 import 'package:my_tide_monitor/models/prediction.dart';
 import 'package:my_tide_monitor/services/noaa_service.dart';
+import 'package:my_tide_monitor/services/tide_format.dart';
 import 'package:my_tide_monitor/widgets/settings_scope.dart';
 
 /// Loads and shows the upcoming tides for one station: the next high and low
@@ -42,21 +44,21 @@ class StationTides extends StatefulWidget {
 
 class _StationTidesState extends State<StationTides> {
   final _noaa = NoaaService();
-  late Future<List<Prediction>> _tides;
+  late Future<Fetched<List<Prediction>>> _tides;
 
   @override
   void initState() {
     super.initState();
-    _tides = _noaa.getUpcomingHighLows(widget.stationId);
+    _tides = _noaa.fetchUpcomingHighLows(widget.stationId);
   }
 
   void _reload() {
-    setState(() => _tides = _noaa.getUpcomingHighLows(widget.stationId));
+    setState(() => _tides = _noaa.fetchUpcomingHighLows(widget.stationId));
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Prediction>>(
+    return FutureBuilder<Fetched<List<Prediction>>>(
       future: _tides,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
@@ -80,8 +82,11 @@ class _StationTidesState extends State<StationTides> {
           );
         }
 
+        final fetched = snapshot.data!;
         return _TideTimes(
-          tides: snapshot.data!,
+          tides: fetched.value,
+          // Set when there was no connection and these are saved predictions.
+          savedAt: fetched.fromCache ? fetched.fetchedAt : null,
           upcomingLimit: widget.upcomingLimit,
           belowNextTides: widget.belowNextTides,
           showUpcoming: widget.showUpcoming,
@@ -94,6 +99,9 @@ class _StationTidesState extends State<StationTides> {
 
 class _TideTimes extends StatelessWidget {
   final List<Prediction> tides;
+
+  /// When these predictions were saved, if they are a saved copy.
+  final DateTime? savedAt;
   final int? upcomingLimit;
   final Widget? belowNextTides;
   final bool showUpcoming;
@@ -101,6 +109,7 @@ class _TideTimes extends StatelessWidget {
 
   const _TideTimes({
     required this.tides,
+    this.savedAt,
     this.upcomingLimit,
     this.belowNextTides,
     this.showUpcoming = true,
@@ -156,6 +165,10 @@ class _TideTimes extends StatelessWidget {
         ],
         if (showNotes)
           Text(
+            // Predictions don't go out of date, so a saved copy is still
+            // right; this just says why it didn't refresh.
+            '${savedAt == null ? '' : 'Offline: showing predictions saved '
+                '${formatAge(DateTime.now().difference(savedAt!))}. '}'
             "Times are in your device's time zone. "
             'Heights are ${settings.heightWord} above mean lower low water (MLLW).',
             style: Theme.of(context).textTheme.bodySmall,

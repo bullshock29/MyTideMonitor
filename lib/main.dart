@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:my_tide_monitor/screens/home_screen.dart';
 import 'package:my_tide_monitor/services/favorites_service.dart';
+import 'package:my_tide_monitor/services/response_cache.dart';
 import 'package:my_tide_monitor/services/settings_service.dart';
 import 'package:my_tide_monitor/theme/app_theme.dart';
 import 'package:my_tide_monitor/widgets/settings_scope.dart';
@@ -10,6 +11,11 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await favoritesService.load();
   await settingsService.load();
+
+  // Tidy up saved responses from stations not looked at for two weeks. Not
+  // awaited: the app doesn't need to wait for housekeeping to start.
+  responseCache.prune(const Duration(days: 14));
+
   runApp(MainApp(settings: settingsService));
 }
 

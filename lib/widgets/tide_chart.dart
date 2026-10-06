@@ -6,6 +6,7 @@ import 'package:my_tide_monitor/models/tide_point.dart';
 import 'package:my_tide_monitor/services/noaa_service.dart';
 import 'package:my_tide_monitor/services/settings_service.dart';
 import 'package:my_tide_monitor/services/tide_curve.dart';
+import 'package:my_tide_monitor/services/tide_format.dart';
 import 'package:my_tide_monitor/widgets/settings_scope.dart';
 
 /// How much of the curve the chart shows around "now".
@@ -79,12 +80,18 @@ class _TideChartState extends State<TideChart> {
         // then (or if it never does) the chart simply has no temperature.
         return FutureBuilder<MarineConditions?>(
           future: widget.marine,
-          builder: (context, marineSnapshot) => TideChartView(
-            curve: snapshot.data!,
-            now: DateTime.now(),
-            showNotes: widget.showNotes,
-            waterTemperatureCelsius: marineSnapshot.data?.waterTemperatureCelsius,
-          ),
+          builder: (context, marineSnapshot) {
+            final marine = marineSnapshot.data;
+            return TideChartView(
+              curve: snapshot.data!,
+              now: DateTime.now(),
+              showNotes: widget.showNotes,
+              waterTemperatureCelsius: marine?.waterTemperatureCelsius,
+              // Only set when the temperature is a saved copy, so it can say
+              // how old it is.
+              waterTemperatureSavedAt: (marine?.fromCache ?? false) ? marine!.fetchedAt : null,
+            );
+          },
         );
       },
     );
@@ -106,12 +113,17 @@ class TideChartView extends StatelessWidget {
   /// leaves it out.
   final double? waterTemperatureCelsius;
 
+  /// When the water temperature was saved, if it is a saved copy shown
+  /// because there was no connection. Null for a fresh one.
+  final DateTime? waterTemperatureSavedAt;
+
   const TideChartView({
     super.key,
     required this.curve,
     required this.now,
     this.showNotes = true,
     this.waterTemperatureCelsius,
+    this.waterTemperatureSavedAt,
   });
 
   @override
@@ -151,6 +163,20 @@ class TideChartView extends StatelessWidget {
     final minY = heights.reduce((a, b) => a < b ? a : b) - padding;
     final maxY = heights.reduce((a, b) => a > b ? a : b) + padding;
     final heightDecimals = settings.heightUnit == HeightUnit.feet ? 1 : 2;
+
+    // The note under the chart. Predictions don't go out of date, so a saved
+    // copy is still right; the first sentence just says why it didn't refresh.
+    final offlineNote = curve.fromCache
+        ? 'Offline: showing predictions saved '
+            '${formatAge(now.difference(curve.fetchedAt))}. '
+        : '';
+    final description = curve.isEstimated
+        ? 'Predicted height in ${settings.heightWord} above mean lower low '
+            'water. Drawn between the predicted high and low tides, so it is '
+            'approximate. Wind and weather can change the real water level.'
+        : 'Predicted height in ${settings.heightWord} above mean lower low '
+            "water, from NOAA's 6-minute predictions. Wind and weather can "
+            'change the real water level.';
 
     return Padding(
       padding: const EdgeInsets.only(top: 16),
@@ -195,7 +221,12 @@ class TideChartView extends StatelessWidget {
                       settings.formatTemperature(waterTemperatureCelsius!),
                       style: textTheme.headlineMedium,
                     ),
-                    Text('Water temp', style: textTheme.bodySmall),
+                    Text(
+                      waterTemperatureSavedAt == null
+                          ? 'Water temp'
+                          : 'Water temp • ${formatAge(now.difference(waterTemperatureSavedAt!))}',
+                      style: textTheme.bodySmall,
+                    ),
                   ],
                 ),
             ],
@@ -320,17 +351,7 @@ class TideChartView extends StatelessWidget {
           ),
           if (showNotes) ...[
             const SizedBox(height: 4),
-            Text(
-              curve.isEstimated
-                  ? 'Predicted height in ${settings.heightWord} above mean '
-                      'lower low water. Drawn between the predicted high and '
-                      'low tides, so it is approximate. Wind and weather can '
-                      'change the real water level.'
-                  : 'Predicted height in ${settings.heightWord} above mean '
-                      "lower low water, from NOAA's 6-minute predictions. "
-                      'Wind and weather can change the real water level.',
-              style: textTheme.bodySmall,
-            ),
+            Text('$offlineNote$description', style: textTheme.bodySmall),
           ],
         ],
       ),

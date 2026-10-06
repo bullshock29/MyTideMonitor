@@ -134,6 +134,84 @@ void main() {
     });
   });
 
+  group('remove and undo', () {
+    setUp(() async {
+      for (final id in ['a', 'b', 'c', 'd']) {
+        await service.toggle(id);
+      }
+    });
+
+    Station station(String id) =>
+        Station(id: id, name: 'Station $id', latitude: 0, longitude: 0);
+
+    test('removing takes it out of the list', () async {
+      final removed = await service.remove('b');
+      expect(removed, isNotNull);
+      expect(service.ids, ['a', 'c', 'd']);
+      expect(service.isFavorite('b'), isFalse);
+    });
+
+    test('removing something that is not a favorite returns null', () async {
+      expect(await service.remove('zzz'), isNull);
+      expect(service.ids, ['a', 'b', 'c', 'd']);
+    });
+
+    test('undo puts it back in the same place', () async {
+      final removed = (await service.remove('b'))!;
+      await service.restore(removed);
+      expect(service.ids, ['a', 'b', 'c', 'd']);
+    });
+
+    test('undo works for the first and the last item', () async {
+      final first = (await service.remove('a'))!;
+      await service.restore(first);
+      expect(service.ids, ['a', 'b', 'c', 'd']);
+
+      final last = (await service.remove('d'))!;
+      await service.restore(last);
+      expect(service.ids, ['a', 'b', 'c', 'd']);
+    });
+
+    test('undo brings back the custom name too', () async {
+      await service.rename(station('c'), 'The Beach');
+      final removed = (await service.remove('c'))!;
+      expect(service.customName('c'), isNull); // gone while removed
+
+      await service.restore(removed);
+      expect(service.displayName(station('c')), 'The Beach');
+      expect(service.ids, ['a', 'b', 'c', 'd']);
+    });
+
+    test('undo does not go past the end if the list got shorter', () async {
+      final removed = (await service.remove('d'))!; // was at index 3
+      await service.remove('c');
+      await service.remove('b');
+      expect(service.ids, ['a']);
+
+      await service.restore(removed);
+      expect(service.ids, ['a', 'd']);
+    });
+
+    test('undo does nothing if it was starred again in the meantime', () async {
+      final removed = (await service.remove('b'))!;
+      await service.toggle('b'); // starred again, goes to the end
+      await service.restore(removed);
+      expect(service.ids, ['a', 'c', 'd', 'b']); // not duplicated
+    });
+
+    test('a removal and its undo are both saved', () async {
+      final removed = (await service.remove('b'))!;
+      var reloaded = FavoritesService();
+      await reloaded.load();
+      expect(reloaded.ids, ['a', 'c', 'd']);
+
+      await service.restore(removed);
+      reloaded = FavoritesService();
+      await reloaded.load();
+      expect(reloaded.ids, ['a', 'b', 'c', 'd']);
+    });
+  });
+
   test('new favorites are added to the end', () async {
     await service.toggle('a');
     await service.toggle('b');

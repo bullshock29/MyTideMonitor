@@ -156,8 +156,4 @@ void main() {
     )));
     expect(find.text('Rising'), findsOneWidget);
   });
-
-  testWidgets('unused TidePoint import check', (tester) async {
-    expect(TidePoint(_t('2026-10-06 14:00'), 1).feet, 1);
-  });
 }

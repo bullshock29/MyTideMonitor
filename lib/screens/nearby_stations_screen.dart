@@ -10,6 +10,7 @@ import 'package:my_tide_monitor/services/station_locator.dart';
 import 'package:my_tide_monitor/services/station_repository.dart';
 import 'package:my_tide_monitor/services/tide_comparison.dart';
 import 'package:my_tide_monitor/services/tide_format.dart';
+import 'package:my_tide_monitor/widgets/favorite_star_button.dart';
 import 'package:my_tide_monitor/widgets/home_button.dart';
 import 'package:my_tide_monitor/widgets/settings_scope.dart';
 
@@ -200,7 +201,6 @@ class _NearbyStationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final station = item.station;
     final settings = SettingsScope.of(context);
-    final isFavorite = favoritesService.isFavorite(station.id);
     final setting = guessSetting(station.name);
     final source = _sourceLabel(station);
 
@@ -224,12 +224,7 @@ class _NearbyStationTile extends StatelessWidget {
           ),
         ],
       ),
-      trailing: IconButton(
-        icon: Icon(isFavorite ? Icons.star : Icons.star_border),
-        color: isFavorite ? Colors.amber : null,
-        tooltip: isFavorite ? 'Remove favorite' : 'Add favorite',
-        onPressed: () => favoritesService.toggle(station.id),
-      ),
+      trailing: FavoriteStarButton(stationId: station.id),
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(

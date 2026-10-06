@@ -18,5 +18,18 @@ class TideCurve {
   /// 6-minute predictions were used.
   final bool isEstimated;
 
-  TideCurve(this.points, {required this.isEstimated});
+  /// When the predictions were loaded (or, for a saved copy, saved).
+  final DateTime fetchedAt;
+
+  /// True when there was no connection and this is a copy saved earlier.
+  /// Predictions don't go out of date, so it's still right for as long as it
+  /// covers the time being asked about.
+  final bool fromCache;
+
+  TideCurve(
+    this.points, {
+    required this.isEstimated,
+    DateTime? fetchedAt,
+    this.fromCache = false,
+  }) : fetchedAt = fetchedAt ?? DateTime.now();
 }

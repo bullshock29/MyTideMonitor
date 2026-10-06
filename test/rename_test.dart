@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:my_tide_monitor/models/station.dart';
 import 'package:my_tide_monitor/screens/station_detail_screen.dart';
 import 'package:my_tide_monitor/services/favorites_service.dart';
+import 'package:my_tide_monitor/services/response_cache.dart';
 import 'package:my_tide_monitor/services/settings_service.dart';
 import 'package:my_tide_monitor/widgets/rename_dialog.dart';
 import 'package:my_tide_monitor/widgets/settings_scope.dart';
@@ -19,6 +20,11 @@ final _station = Station(
 
 void main() {
   setUp(() async {
+    // The detail screen loads tides, which are saved to the response cache.
+    // A widget test can't use real files (they never finish on its fake
+    // clock), so use a cache that lives in memory.
+    responseCache = MemoryResponseCache();
+
     SharedPreferences.setMockInitialValues({});
     // These tests use the shared instance, because that is what the screens read.
     await favoritesService.load();

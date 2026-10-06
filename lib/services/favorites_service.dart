@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:my_tide_monitor/models/station.dart';
@@ -62,6 +63,35 @@ class FavoritesService extends ChangeNotifier {
     await _changed();
   }
 
+  /// Removes a favorite and returns what was removed, so [restore] can put it
+  /// back exactly as it was (same place in the list, same custom name).
+  /// Returns null if the station wasn't a favorite.
+  Future<RemovedFavorite?> remove(String stationId) async {
+    final index = _ids.indexOf(stationId);
+    if (index < 0) return null;
+
+    final removed = RemovedFavorite(
+      id: stationId,
+      index: index,
+      customName: _names[stationId],
+    );
+    _ids.removeAt(index);
+    _names.remove(stationId);
+    await _changed();
+    return removed;
+  }
+
+  /// Puts back a favorite that [remove] took away. Does nothing if the
+  /// station has been starred again in the meantime.
+  Future<void> restore(RemovedFavorite removed) async {
+    if (_ids.contains(removed.id)) return;
+
+    // The list may be shorter now, so don't go past its end.
+    _ids.insert(math.min(removed.index, _ids.length), removed.id);
+    if (removed.customName != null) _names[removed.id] = removed.customName!;
+    await _changed();
+  }
+
   /// The name the user gave this favorite, or null if it has none.
   String? customName(String stationId) => _names[stationId];
 
@@ -106,6 +136,19 @@ class FavoritesService extends ChangeNotifier {
     await prefs.setStringList(_key, _ids);
     await prefs.setString(_namesKey, jsonEncode(_names));
   }
+}
+
+/// A favorite that was just removed, kept so "Undo" can put it back.
+class RemovedFavorite {
+  final String id;
+
+  /// Where it was in the list.
+  final int index;
+
+  /// The name the user had given it, if any.
+  final String? customName;
+
+  RemovedFavorite({required this.id, required this.index, this.customName});
 }
 
 /// The one shared instance used across the app.
