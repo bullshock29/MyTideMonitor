@@ -18,11 +18,21 @@ class StationTides extends StatefulWidget {
   /// "Upcoming" list. It also stays visible if the tide times fail to load.
   final Widget? belowNextTides;
 
+  /// Whether to show the "Upcoming" list of highs and lows. The home screen
+  /// turns it off because it shows a tide chart instead.
+  final bool showUpcoming;
+
+  /// Whether to show the note about time zones and what the heights mean.
+  /// The home screen leaves it out to save space.
+  final bool showNotes;
+
   const StationTides({
     super.key,
     required this.stationId,
     this.upcomingLimit,
     this.belowNextTides,
+    this.showUpcoming = true,
+    this.showNotes = true,
   });
 
   @override
@@ -73,6 +83,8 @@ class _StationTidesState extends State<StationTides> {
           tides: snapshot.data!,
           upcomingLimit: widget.upcomingLimit,
           belowNextTides: widget.belowNextTides,
+          showUpcoming: widget.showUpcoming,
+          showNotes: widget.showNotes,
         );
       },
     );
@@ -83,11 +95,15 @@ class _TideTimes extends StatelessWidget {
   final List<Prediction> tides;
   final int? upcomingLimit;
   final Widget? belowNextTides;
+  final bool showUpcoming;
+  final bool showNotes;
 
   const _TideTimes({
     required this.tides,
     this.upcomingLimit,
     this.belowNextTides,
+    this.showUpcoming = true,
+    this.showNotes = true,
   });
 
   @override
@@ -117,28 +133,31 @@ class _TideTimes extends StatelessWidget {
           ],
         ),
         ?belowNextTides,
-        const SizedBox(height: 24),
-        Text('Upcoming', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 4),
-        for (final tide in upcoming)
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(
-              tide.isHigh ? Icons.arrow_upward : Icons.arrow_downward,
+        if (showUpcoming || showNotes) const SizedBox(height: 24),
+        if (showUpcoming) ...[
+          Text('Upcoming', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          for (final tide in upcoming)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                tide.isHigh ? Icons.arrow_upward : Icons.arrow_downward,
+              ),
+              title: Text(tide.isHigh ? 'High tide' : 'Low tide'),
+              subtitle: Text(_formatTime(tide.time)),
+              trailing: Text(
+                '${tide.value.toStringAsFixed(1)} ft',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
             ),
-            title: Text(tide.isHigh ? 'High tide' : 'Low tide'),
-            subtitle: Text(_formatTime(tide.time)),
-            trailing: Text(
-              '${tide.value.toStringAsFixed(1)} ft',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+          const SizedBox(height: 8),
+        ],
+        if (showNotes)
+          Text(
+            "Times are in your device's time zone. "
+            'Heights are feet above mean lower low water (MLLW).',
+            style: Theme.of(context).textTheme.bodySmall,
           ),
-        const SizedBox(height: 8),
-        Text(
-          "Times are in your device's time zone. "
-          'Heights are feet above mean lower low water (MLLW).',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
       ],
     );
   }

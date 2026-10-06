@@ -4,6 +4,7 @@ import 'package:my_tide_monitor/models/us_states.dart';
 import 'package:my_tide_monitor/services/favorites_service.dart';
 import 'package:my_tide_monitor/widgets/station_tides.dart';
 import 'package:my_tide_monitor/widgets/station_waves.dart';
+import 'package:my_tide_monitor/widgets/tide_chart.dart';
 
 class StationDetailScreen extends StatelessWidget {
   final Station station;
@@ -52,7 +53,15 @@ class StationDetailScreen extends StatelessWidget {
           const SizedBox(height: 24),
           StationTides(
             stationId: station.id,
-            belowNextTides: StationWaves(station: station),
+            // Under the "Next high" and "Next low" tiles: waves, then the
+            // tide chart. The "Upcoming" list follows below them.
+            belowNextTides: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                StationWaves(station: station),
+                TideChart(station: station),
+              ],
+            ),
           ),
         ],
       ),

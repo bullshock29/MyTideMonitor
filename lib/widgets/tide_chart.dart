@@ -1,0 +1,276 @@
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:my_tide_monitor/models/station.dart';
+import 'package:my_tide_monitor/models/tide_point.dart';
+import 'package:my_tide_monitor/services/noaa_service.dart';
+import 'package:my_tide_monitor/services/tide_curve.dart';
+
+/// How much of the curve the chart shows around "now".
+const Duration _hoursBefore = Duration(hours: 6);
+const Duration _hoursAfter = Duration(hours: 24);
+
+/// Loads a station's tide curve and shows it: the predicted height right now,
+/// whether the tide is rising or falling, and a chart from 6 hours ago to
+/// 24 hours ahead with a marker at the current time.
+class TideChart extends StatefulWidget {
+  final Station station;
+
+  /// Whether to show the explanation under the chart (what the height means
+  /// and how it was drawn). The home screen leaves it out to save space.
+  final bool showNotes;
+
+  const TideChart({super.key, required this.station, this.showNotes = true});
+
+  @override
+  State<TideChart> createState() => _TideChartState();
+}
+
+class _TideChartState extends State<TideChart> {
+  final _noaa = NoaaService();
+  late Future<TideCurve> _curve;
+
+  @override
+  void initState() {
+    super.initState();
+    _curve = _noaa.getTideCurve(widget.station);
+  }
+
+  void _reload() => setState(() => _curve = _noaa.getTideCurve(widget.station));
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<TideCurve>(
+      future: _curve,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const SizedBox(
+            height: 220,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: Column(
+              children: [
+                const Text('Could not load the tide chart.'),
+                TextButton(onPressed: _reload, child: const Text('Try again')),
+              ],
+            ),
+          );
+        }
+
+        return TideChartView(
+          curve: snapshot.data!,
+          now: DateTime.now(),
+          showNotes: widget.showNotes,
+        );
+      },
+    );
+  }
+}
+
+/// Draws a [TideCurve]. Separate from [TideChart] so it can be tested
+/// without loading anything.
+class TideChartView extends StatelessWidget {
+  final TideCurve curve;
+
+  /// The moment the chart is centered on. Passed in so tests can fix it.
+  final DateTime now;
+
+  /// Whether to show the explanation under the chart.
+  final bool showNotes;
+
+  const TideChartView({
+    super.key,
+    required this.curve,
+    required this.now,
+    this.showNotes = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
+
+    final nowUtc = now.toUtc();
+    final currentHeight = heightAt(curve.points, nowUtc);
+    if (currentHeight == null) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 16),
+        child: Text('Tide chart is not available right now.'),
+      );
+    }
+    final rising = isRising(curve.points, nowUtc);
+
+    // Only the part of the curve around now, with x in hours from now.
+    final visible = curve.points.where((p) {
+      return !p.time.isBefore(nowUtc.subtract(_hoursBefore)) &&
+          !p.time.isAfter(nowUtc.add(_hoursAfter));
+    }).toList();
+    final spots = [
+      for (final p in visible)
+        FlSpot(p.time.difference(nowUtc).inMinutes / 60, p.feet),
+    ];
+
+    final heights = visible.map((p) => p.feet);
+    final minY = heights.reduce((a, b) => a < b ? a : b) - 0.5;
+    final maxY = heights.reduce((a, b) => a > b ? a : b) + 0.5;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                '${currentHeight.toStringAsFixed(1)} ft',
+                style: textTheme.headlineMedium,
+              ),
+              const SizedBox(width: 8),
+              if (rising != null) ...[
+                Icon(rising ? Icons.arrow_upward : Icons.arrow_downward),
+                Text(rising ? 'Rising' : 'Falling', style: textTheme.titleMedium),
+              ],
+            ],
+          ),
+          Text('Tide height now', style: textTheme.bodySmall),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 200,
+            child: LineChart(
+              LineChartData(
+                minX: -_hoursBefore.inHours.toDouble(),
+                maxX: _hoursAfter.inHours.toDouble(),
+                minY: minY,
+                maxY: maxY,
+                gridData: FlGridData(
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (_) => FlLine(
+                    color: colors.outlineVariant,
+                    strokeWidth: 1,
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(),
+                  rightTitles: const AxisTitles(),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 32,
+                      getTitlesWidget: (value, meta) {
+                        // Skip the labels at the very top and bottom edges.
+                        if (value == meta.min || value == meta.max) {
+                          return const SizedBox.shrink();
+                        }
+                        return SideTitleWidget(
+                          meta: meta,
+                          child: Text(
+                            value.toStringAsFixed(0),
+                            style: textTheme.bodySmall,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: 6,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, meta) {
+                        final label = value == 0
+                            ? 'Now'
+                            : DateFormat('h a').format(
+                                now.add(Duration(hours: value.round())),
+                              );
+                        return SideTitleWidget(
+                          meta: meta,
+                          child: Text(label, style: textTheme.bodySmall),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                // A dashed line down the chart at the current time.
+                extraLinesData: ExtraLinesData(
+                  verticalLines: [
+                    VerticalLine(
+                      x: 0,
+                      color: colors.primary,
+                      strokeWidth: 1.5,
+                      dashArray: [4, 4],
+                    ),
+                  ],
+                ),
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipItems: (touched) => [
+                      for (final spot in touched)
+                        if (spot.barIndex == 0)
+                          LineTooltipItem(
+                            '${DateFormat('EEE h:mm a').format(now.add(Duration(minutes: (spot.x * 60).round())))}\n'
+                            '${spot.y.toStringAsFixed(1)} ft',
+                            TextStyle(color: colors.onInverseSurface),
+                          )
+                        else
+                          null,
+                    ],
+                  ),
+                ),
+                lineBarsData: [
+                  // The tide curve, shaded underneath like water.
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    curveSmoothness: 0.15,
+                    color: colors.primary,
+                    barWidth: 3,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: colors.primary.withValues(alpha: 0.15),
+                    ),
+                  ),
+                  // A dot on the curve at the current time.
+                  LineChartBarData(
+                    spots: [FlSpot(0, currentHeight)],
+                    barWidth: 0,
+                    dotData: FlDotData(
+                      getDotPainter: (spot, percent, bar, index) =>
+                          FlDotCirclePainter(
+                        radius: 6,
+                        color: colors.primary,
+                        strokeWidth: 3,
+                        strokeColor: colors.surface,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (showNotes) ...[
+            const SizedBox(height: 4),
+            Text(
+              curve.isEstimated
+                  ? 'Predicted height in feet above mean lower low water. '
+                      'Drawn between the predicted high and low tides, so it '
+                      'is approximate. Wind and weather can change the real '
+                      'water level.'
+                  : "Predicted height in feet above mean lower low water, "
+                      "from NOAA's 6-minute predictions. Wind and weather can "
+                      "change the real water level.",
+              style: textTheme.bodySmall,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}

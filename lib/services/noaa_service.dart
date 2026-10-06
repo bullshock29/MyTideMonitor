@@ -4,6 +4,9 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:my_tide_monitor/models/prediction.dart';
+import 'package:my_tide_monitor/models/station.dart';
+import 'package:my_tide_monitor/models/tide_point.dart';
+import 'package:my_tide_monitor/services/tide_curve.dart';
 
 /// Thrown when NOAA answers with an error instead of data.
 class NoaaException implements Exception {
@@ -40,6 +43,66 @@ class NoaaService {
   Future<List<Prediction>> getUpcomingHighLows(String stationId) async {
     final now = DateTime.now().toUtc();
 
+    // Start at the beginning of today (UTC) and ask for 3 days.
+    final predictions = await _fetchPredictions(
+      stationId,
+      begin: now,
+      hours: 72,
+      highLowOnly: true,
+    );
+    return predictions.where((p) => p.time.isAfter(now)).toList();
+  }
+
+  /// A tide curve for [station] from 6 hours ago to 24 hours ahead (a little
+  /// more on each side), good for drawing a chart and finding the height now.
+  ///
+  /// NOAA publishes a smooth prediction every 6 minutes for reference
+  /// stations, and that is used when available. Subordinate stations only get
+  /// highs and lows, so for those the curve is drawn between them (see
+  /// [curveFromExtremes]) and the result is marked as estimated.
+  Future<TideCurve> getTideCurve(Station station) async {
+    // Start of yesterday (UTC) for 72 hours covers everything we need.
+    final begin = DateTime.now().toUtc().subtract(const Duration(days: 1));
+
+    if (!station.isSubordinate) {
+      try {
+        final points = await _fetchPredictions(
+          station.id,
+          begin: begin,
+          hours: 72,
+        );
+        return TideCurve(
+          [for (final p in points) TidePoint(p.time, p.value)],
+          isEstimated: false,
+        );
+      } on NoaaException {
+        // No 6-minute data for this station; use highs and lows below.
+      }
+    }
+
+    final extremes = await _fetchPredictions(
+      station.id,
+      begin: begin,
+      hours: 72,
+      highLowOnly: true,
+    );
+    final points = curveFromExtremes(extremes);
+    if (points.isEmpty) {
+      throw NoaaException('No tide predictions are available for this station.');
+    }
+    return TideCurve(points, isEstimated: true);
+  }
+
+  /// Fetches predictions for [stationId], starting at the UTC date of
+  /// [begin] and running for [hours]. Heights are in feet above MLLW and
+  /// times are UTC. [highLowOnly] asks for highs and lows instead of a point
+  /// every 6 minutes.
+  Future<List<Prediction>> _fetchPredictions(
+    String stationId, {
+    required DateTime begin,
+    required int hours,
+    bool highLowOnly = false,
+  }) async {
     final uri = Uri.https(_host, '/api/prod/datagetter', {
       'product': 'predictions',
       'station': stationId,
@@ -47,10 +110,9 @@ class NoaaService {
       'time_zone': 'gmt',
       'units': 'english',
       'format': 'json',
-      'interval': 'hilo',
-      // Start at the beginning of today (UTC) and ask for 3 days.
-      'begin_date': DateFormat('yyyyMMdd').format(now),
-      'range': '72',
+      if (highLowOnly) 'interval': 'hilo',
+      'begin_date': DateFormat('yyyyMMdd').format(begin.toUtc()),
+      'range': '$hours',
     });
 
     final response = await http.get(uri).timeout(const Duration(seconds: 30));
@@ -74,7 +136,6 @@ class NoaaService {
 
     return (body['predictions'] as List)
         .map((p) => Prediction.fromJson(p as Map<String, dynamic>, isUtc: true))
-        .where((p) => p.time.isAfter(now))
         .toList();
   }
 }

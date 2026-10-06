@@ -14,7 +14,11 @@ import 'package:my_tide_monitor/services/wave_size.dart';
 class StationWaves extends StatefulWidget {
   final Station station;
 
-  const StationWaves({super.key, required this.station});
+  /// Whether to show the small "open-water estimate" explanation. The home
+  /// screen leaves it out to save space.
+  final bool showNotes;
+
+  const StationWaves({super.key, required this.station, this.showNotes = true});
 
   @override
   State<StationWaves> createState() => _StationWavesState();
@@ -76,11 +80,12 @@ class _StationWavesState extends State<StationWaves> {
                     Text(
                       'Next 24 hours: ${formatWaveRange(conditions.next24HoursMinFeet, conditions.next24HoursMaxFeet)}',
                     ),
-                    Text(
-                      'Open-water estimate. Surf at the beach can be '
-                      'smaller or larger.',
-                      style: textTheme.bodySmall,
-                    ),
+                    if (widget.showNotes)
+                      Text(
+                        'Open-water estimate. Surf at the beach can be '
+                        'smaller or larger.',
+                        style: textTheme.bodySmall,
+                      ),
                   ],
                 ),
               ),
