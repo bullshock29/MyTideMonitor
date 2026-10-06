@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:my_tide_monitor/models/station.dart';
 import 'package:my_tide_monitor/models/us_states.dart';
+import 'package:my_tide_monitor/screens/menu/find_by_city_screen.dart';
 import 'package:my_tide_monitor/screens/station_detail_screen.dart';
 import 'package:my_tide_monitor/services/favorites_service.dart';
 import 'package:my_tide_monitor/services/station_repository.dart';
@@ -22,6 +24,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // makes them fetch fresh tide times (used by pull-to-refresh).
   int _refreshCount = 0;
 
+  // True while the user is dragging cards into a new order.
+  bool _reordering = false;
+
   @override
   void initState() {
     super.initState();
@@ -34,49 +39,128 @@ class _HomeScreenState extends State<HomeScreen> {
     await Future<void>.delayed(const Duration(milliseconds: 500));
   }
 
+  void _startReordering() {
+    HapticFeedback.mediumImpact();
+    setState(() => _reordering = true);
+  }
+
+  void _stopReordering() => setState(() => _reordering = false);
+
+  // The favorited stations, in the order the user arranged them.
+  List<Station> _favoriteStations(List<Station> all) {
+    final byId = {for (final s in all) s.id: s};
+    return [
+      for (final id in favoritesService.ids)
+        if (byId[id] != null) byId[id]!,
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('My Tide Monitor')),
-      drawer: const AppDrawer(),
-      body: FutureBuilder<List<Station>>(
-        future: _stations,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return const Center(child: Text('Could not load stations.'));
-          }
-
-          // Rebuild when a favorite is added or removed.
-          return ListenableBuilder(
-            listenable: favoritesService,
-            builder: (context, _) {
-              final favorites = snapshot.data!
-                  .where((s) => favoritesService.isFavorite(s.id))
-                  .toList();
-
-              if (favorites.isEmpty) return const _EmptyState();
-
-              return RefreshIndicator(
-                onRefresh: _refresh,
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: favorites.length,
-                  itemBuilder: (context, index) {
-                    final station = favorites[index];
-                    return _FavoriteStationCard(
-                      key: ValueKey('${station.id}-$_refreshCount'),
-                      station: station,
-                    );
-                  },
+    // While reordering, the back button leaves reorder mode instead of the app.
+    return PopScope(
+      canPop: !_reordering,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _stopReordering();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_reordering ? 'Reorder locations' : 'My Tide Monitor'),
+          actions: [
+            if (_reordering)
+              IconButton(
+                icon: const Icon(Icons.check),
+                tooltip: 'Done',
+                onPressed: _stopReordering,
+              ),
+          ],
+        ),
+        drawer: const AppDrawer(),
+        floatingActionButton: _reordering
+            ? null
+            : FloatingActionButton(
+                tooltip: 'Add a location',
+                shape: const CircleBorder(),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FindByCityScreen()),
                 ),
-              );
-            },
+                child: const Icon(Icons.add),
+              ),
+        body: FutureBuilder<List<Station>>(
+          future: _stations,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return const Center(child: Text('Could not load stations.'));
+            }
+
+            // Rebuild when a favorite is added, removed, or moved.
+            return ListenableBuilder(
+              listenable: favoritesService,
+              builder: (context, _) {
+                final favorites = _favoriteStations(snapshot.data!);
+
+                if (favorites.isEmpty) return const _EmptyState();
+
+                return _reordering
+                    ? _buildReorderList(favorites)
+                    : _buildCardList(favorites);
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardList(List<Station> favorites) {
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      child: ListView.builder(
+        // Extra room at the bottom so the + button never covers the last card.
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 88),
+        itemCount: favorites.length,
+        itemBuilder: (context, index) {
+          final station = favorites[index];
+          // A long press anywhere on a card starts reordering.
+          return GestureDetector(
+            key: ValueKey('${station.id}-$_refreshCount'),
+            onLongPress: _startReordering,
+            child: _FavoriteStationCard(station: station),
           );
         },
       ),
+    );
+  }
+
+  // In reorder mode the tall tide cards shrink to one line each, so many fit
+  // on screen and are easy to drag past each other.
+  Widget _buildReorderList(List<Station> favorites) {
+    return ReorderableListView.builder(
+      padding: const EdgeInsets.all(12),
+      buildDefaultDragHandles: false,
+      itemCount: favorites.length,
+      onReorderItem: favoritesService.reorder,
+      itemBuilder: (context, index) {
+        final station = favorites[index];
+        final hasState = station.state != null && station.state!.isNotEmpty;
+        return Card(
+          key: ValueKey(station.id),
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            title: Text(station.name),
+            subtitle: hasState ? Text(stateName(station.state!)) : null,
+            // Dragging starts as soon as the handle is touched.
+            trailing: ReorderableDragStartListener(
+              index: index,
+              child: const Icon(Icons.drag_handle),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -84,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
 class _FavoriteStationCard extends StatelessWidget {
   final Station station;
 
-  const _FavoriteStationCard({super.key, required this.station});
+  const _FavoriteStationCard({required this.station});
 
   @override
   Widget build(BuildContext context) {
@@ -140,8 +224,8 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Open the menu, choose NOAA Stations, and tap the star on '
-              'a station to see its tides here.',
+              'Tap the + button to find a location by name or with your '
+              'current location, and its tides will show up here.',
               textAlign: TextAlign.center,
             ),
           ],

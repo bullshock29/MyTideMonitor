@@ -18,6 +18,22 @@ class NoaaException implements Exception {
 class NoaaService {
   static const String _host = 'api.tidesandcurrents.noaa.gov';
 
+  /// Like [getUpcomingHighLows], but returns null instead of throwing.
+  ///
+  /// NOAA occasionally fails a request that works a moment later, so this
+  /// tries twice. A station that still fails (some never have predictions)
+  /// gives null, so one bad station doesn't break a screen full of them.
+  Future<List<Prediction>?> tryGetUpcomingHighLows(String stationId) async {
+    for (var attempt = 1; attempt <= 2; attempt++) {
+      try {
+        return await getUpcomingHighLows(stationId);
+      } catch (_) {
+        if (attempt == 1) await Future<void>.delayed(const Duration(seconds: 1));
+      }
+    }
+    return null;
+  }
+
   /// The upcoming high and low tides for [stationId], soonest first.
   ///
   /// Times are returned in UTC; call `.toLocal()` to show them on the device.

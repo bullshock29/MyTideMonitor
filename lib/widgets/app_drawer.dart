@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_tide_monitor/screens/menu/find_by_city_screen.dart';
 import 'package:my_tide_monitor/screens/menu/noaa_stations_screen.dart';
 import 'package:my_tide_monitor/screens/menu/profile_screen.dart';
 import 'package:my_tide_monitor/screens/menu/settings_screen.dart';
@@ -37,6 +38,11 @@ class AppDrawer extends StatelessWidget {
             leading: const Icon(Icons.home),
             title: const Text('Home'),
             onTap: () => _goHome(context),
+          ),
+          ListTile(
+            leading: const Icon(Icons.location_city),
+            title: const Text('Find a Location'),
+            onTap: () => _open(context, const FindByCityScreen()),
           ),
           ListTile(
             leading: const Icon(Icons.settings),

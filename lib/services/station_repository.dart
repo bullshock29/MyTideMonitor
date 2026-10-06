@@ -13,8 +13,13 @@ import 'package:path_provider/path_provider.dart';
 /// network until it is older than [maxAge].
 ///
 /// Cache file format:
-/// `{"fetchedAt": "<ISO 8601 UTC>", "stations": [ {id, name, state, lat, lng, type}, ... ]}`
+/// `{"version": 2, "fetchedAt": "<ISO 8601 UTC>", "stations": [ {id, name, state, lat, lng, type, reference_id}, ... ]}`
 class StationRepository {
+  /// Bump this when the cache gains new fields, so older cache files are
+  /// refreshed instead of being used with the new fields missing.
+  /// 1 (no version field): no reference_id. 2: adds reference_id.
+  static const int _cacheVersion = 2;
+
   static final Uri _stationsUrl = Uri.parse(
     'https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json'
     '?type=tidepredictions',
@@ -31,7 +36,10 @@ class StationRepository {
   Future<List<Station>> getStations({bool forceRefresh = false}) async {
     final cached = await _readCache();
 
-    if (cached != null && !forceRefresh && !_isStale(cached.fetchedAt)) {
+    if (cached != null &&
+        !forceRefresh &&
+        cached.version == _cacheVersion &&
+        !_isStale(cached.fetchedAt)) {
       return cached.stations;
     }
 
@@ -74,6 +82,7 @@ class StationRepository {
   Future<void> _writeCache(List<Station> stations) async {
     final file = await _cacheFile();
     final json = jsonEncode({
+      'version': _cacheVersion,
       'fetchedAt': DateTime.now().toUtc().toIso8601String(),
       'stations': stations.map((s) => s.toJson()).toList(),
     });
@@ -82,7 +91,8 @@ class StationRepository {
 
   /// Reads the cache file. Returns null if it is missing or unreadable, so a
   /// corrupt file just triggers a fresh download.
-  Future<({DateTime fetchedAt, List<Station> stations})?> _readCache() async {
+  Future<({int version, DateTime fetchedAt, List<Station> stations})?>
+      _readCache() async {
     try {
       final file = await _cacheFile();
       if (!await file.exists()) return null;
@@ -92,6 +102,7 @@ class StationRepository {
           .map((s) => Station.fromJson(s as Map<String, dynamic>))
           .toList();
       return (
+        version: json['version'] as int? ?? 1, // version 1 had no such field
         fetchedAt: DateTime.parse(json['fetchedAt'] as String),
         stations: stations,
       );
