@@ -3,6 +3,7 @@ import 'package:my_tide_monitor/models/station.dart';
 import 'package:my_tide_monitor/models/us_states.dart';
 import 'package:my_tide_monitor/services/favorites_service.dart';
 import 'package:my_tide_monitor/widgets/station_tides.dart';
+import 'package:my_tide_monitor/widgets/station_waves.dart';
 
 class StationDetailScreen extends StatelessWidget {
   final Station station;
@@ -49,7 +50,10 @@ class StationDetailScreen extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 24),
-          StationTides(stationId: station.id),
+          StationTides(
+            stationId: station.id,
+            belowNextTides: StationWaves(station: station),
+          ),
         ],
       ),
     );

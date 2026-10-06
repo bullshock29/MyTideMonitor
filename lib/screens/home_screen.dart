@@ -8,6 +8,7 @@ import 'package:my_tide_monitor/services/favorites_service.dart';
 import 'package:my_tide_monitor/services/station_repository.dart';
 import 'package:my_tide_monitor/widgets/app_drawer.dart';
 import 'package:my_tide_monitor/widgets/station_tides.dart';
+import 'package:my_tide_monitor/widgets/station_waves.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -197,7 +198,11 @@ class _FavoriteStationCard extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: StationTides(stationId: station.id, upcomingLimit: 3),
+            child: StationTides(
+              stationId: station.id,
+              upcomingLimit: 3,
+              belowNextTides: StationWaves(station: station),
+            ),
           ),
         ],
       ),

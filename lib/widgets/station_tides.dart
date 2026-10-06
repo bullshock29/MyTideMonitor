@@ -14,7 +14,16 @@ class StationTides extends StatefulWidget {
   /// Limits how many rows the "Upcoming" list shows. Null shows them all.
   final int? upcomingLimit;
 
-  const StationTides({super.key, required this.stationId, this.upcomingLimit});
+  /// Shown directly under the "Next high" and "Next low" tiles, above the
+  /// "Upcoming" list. It also stays visible if the tide times fail to load.
+  final Widget? belowNextTides;
+
+  const StationTides({
+    super.key,
+    required this.stationId,
+    this.upcomingLimit,
+    this.belowNextTides,
+  });
 
   @override
   State<StationTides> createState() => _StationTidesState();
@@ -55,6 +64,7 @@ class _StationTidesState extends State<StationTides> {
               Text(message, textAlign: TextAlign.center),
               const SizedBox(height: 8),
               FilledButton(onPressed: _reload, child: const Text('Try again')),
+              ?widget.belowNextTides,
             ],
           );
         }
@@ -62,6 +72,7 @@ class _StationTidesState extends State<StationTides> {
         return _TideTimes(
           tides: snapshot.data!,
           upcomingLimit: widget.upcomingLimit,
+          belowNextTides: widget.belowNextTides,
         );
       },
     );
@@ -71,13 +82,24 @@ class _StationTidesState extends State<StationTides> {
 class _TideTimes extends StatelessWidget {
   final List<Prediction> tides;
   final int? upcomingLimit;
+  final Widget? belowNextTides;
 
-  const _TideTimes({required this.tides, this.upcomingLimit});
+  const _TideTimes({
+    required this.tides,
+    this.upcomingLimit,
+    this.belowNextTides,
+  });
 
   @override
   Widget build(BuildContext context) {
     if (tides.isEmpty) {
-      return const Text('No upcoming tide predictions.');
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('No upcoming tide predictions.'),
+          ?belowNextTides,
+        ],
+      );
     }
 
     final nextHigh = tides.where((t) => t.isHigh).firstOrNull;
@@ -94,6 +116,7 @@ class _TideTimes extends StatelessWidget {
             Expanded(child: _NextTideCard(label: 'Next low', tide: nextLow)),
           ],
         ),
+        ?belowNextTides,
         const SizedBox(height: 24),
         Text('Upcoming', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 4),
