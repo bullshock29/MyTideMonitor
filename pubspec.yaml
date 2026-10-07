@@ -1,5 +1,5 @@
 name: my_tide_monitor
-description: "A new Flutter project."
+description: "Tides and waves for the beaches I care about."
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -7,13 +7,48 @@ environment:
   sdk: ^3.13.5
 
 dependencies:
+  fl_chart: ^1.2.0
   flutter:
     sdk: flutter
+  geolocator: ^14.1.1
+  http: ^1.6.0
+  intl: ^0.20.3
+  path_provider: ^2.1.6
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
 
 flutter:
   uses-material-design: true
+
+# App icon. The art is drawn by tool/generate_app_icon_test.dart; after
+# changing it, run:  dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: false
+  # Older phones: one flat picture.
+  image_path: "assets/icon/app_icon.png"
+  # Android 8+: two layers, so the phone can crop the icon to its own shape
+  # and move the layers slightly for a subtle depth effect.
+  adaptive_icon_background: "assets/icon/app_icon_background.png"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  # The art already keeps the logo inside the area every phone shows, so no
+  # extra padding is wanted.
+  adaptive_icon_foreground_inset: 0
+  # Android 13+ "themed icons": the logo as a single shape the phone can tint.
+  adaptive_icon_monochrome: "assets/icon/app_icon_monochrome.png"
+
+# Splash screen: the white logo on blue, shown while the app starts. After
+# changing it, run:  dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#1565C0"
+  image: assets/icon/splash_logo.png
+  # Android 12+ has its own splash style that shows the image inside a circle.
+  android_12:
+    color: "#1565C0"
+    image: assets/icon/splash_logo.png

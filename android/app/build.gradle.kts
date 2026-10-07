@@ -44,6 +44,16 @@ kotlin {
     }
 }
 
+dependencies {
+    // Redraws the home screen widget every so often (see TideWidgetWorker).
+    implementation("androidx.work:work-runtime:2.9.1")
+
+    // For the tests of the widget's own logic (android/app/src/test).
+    testImplementation("junit:junit:4.13.2")
+    // Android's built-in JSON classes are empty shells in unit tests, so use the real thing.
+    testImplementation("org.json:json:20240303")
+}
+
 flutter {
     source = "../.."
 }

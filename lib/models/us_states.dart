@@ -1,0 +1,36 @@
+/// Full names for the state and territory codes NOAA uses on its stations.
+const Map<String, String> usStateNames = {
+  'AK': 'Alaska',
+  'AL': 'Alabama',
+  'AS': 'American Samoa',
+  'CA': 'California',
+  'CT': 'Connecticut',
+  'DC': 'District of Columbia',
+  'DE': 'Delaware',
+  'FL': 'Florida',
+  'FM': 'Micronesia',
+  'GA': 'Georgia',
+  'GU': 'Guam',
+  'HI': 'Hawaii',
+  'LA': 'Louisiana',
+  'MA': 'Massachusetts',
+  'MD': 'Maryland',
+  'ME': 'Maine',
+  'MS': 'Mississippi',
+  'NC': 'North Carolina',
+  'NH': 'New Hampshire',
+  'NJ': 'New Jersey',
+  'NY': 'New York',
+  'OR': 'Oregon',
+  'PA': 'Pennsylvania',
+  'PR': 'Puerto Rico',
+  'RI': 'Rhode Island',
+  'SC': 'South Carolina',
+  'TX': 'Texas',
+  'VA': 'Virginia',
+  'VI': 'U.S. Virgin Islands',
+  'WA': 'Washington',
+};
+
+/// The full name for [code], or the code itself if it isn't in the map.
+String stateName(String code) => usStateNames[code] ?? code;
