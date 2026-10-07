@@ -26,7 +26,9 @@ android {
         // You can force using the value of versionCode by specifying the `-P force-version-code-ignoring-abi=true`
         // flag during build.
         versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        // Shown in the phone's app info as name.build, like a Windows file
+        // version: pubspec.yaml's 1.10.7+26 appears as 1.10.7.26.
+        versionName = "${flutter.versionName}.${flutter.versionCode}"
     }
 
     buildTypes {
