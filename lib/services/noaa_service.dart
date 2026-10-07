@@ -91,6 +91,30 @@ class NoaaService {
     return Fetched(upcoming, fetchedAt: loaded.fetchedAt, fromCache: loaded.fromCache);
   }
 
+  /// The high and low tides from yesterday to [days] days ahead, for the home
+  /// screen widget. The widget works out the tide height at any moment from
+  /// these, so with two weeks of them it stays right without the app being
+  /// opened, and without any network.
+  ///
+  /// The tide before now is included on purpose: the height right now is
+  /// somewhere between the last high or low and the next one.
+  Future<Fetched<List<Prediction>>> fetchHighLowsAhead(
+    String stationId, {
+    int days = 14,
+  }) async {
+    final begin = DateTime.now().toUtc().subtract(const Duration(days: 1));
+
+    final loaded = await _load(
+      _predictionsUri(stationId, begin: begin, hours: (days + 1) * 24, highLowOnly: true),
+      'noaa-widget-hilo-$stationId',
+    );
+    return Fetched(
+      _parse(loaded.body),
+      fetchedAt: loaded.fetchedAt,
+      fromCache: loaded.fromCache,
+    );
+  }
+
   /// A tide curve for [station] from 6 hours ago to 24 hours ahead (a little
   /// more on each side), good for drawing a chart and finding the height now.
   ///

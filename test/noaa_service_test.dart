@@ -157,6 +157,58 @@ void main() {
     });
   });
 
+  group('tides for the home screen widget', () {
+    test('asks for yesterday through two weeks ahead, as highs and lows', () async {
+      final noaa = service((_) => ok(hiloResponse(now, hoursAfter: 340)));
+      await noaa.fetchHighLowsAhead('8661070');
+
+      final query = requests.single.queryParameters;
+      expect(query['station'], '8661070');
+      expect(query['interval'], 'hilo');
+      expect(query['range'], '360'); // 15 days: yesterday plus 14 ahead
+
+      final yesterday = now.subtract(const Duration(days: 1));
+      String two(int n) => n.toString().padLeft(2, '0');
+      expect(query['begin_date'], '${yesterday.year}${two(yesterday.month)}${two(yesterday.day)}');
+    });
+
+    test('keeps the tides from before now, which the widget needs', () async {
+      final noaa = service((_) => ok(hiloResponse(now, hoursBefore: 12)));
+
+      final result = await noaa.fetchHighLowsAhead('8661070');
+
+      expect(result.value.any((p) => p.time.isBefore(now)), isTrue);
+      expect(result.value.any((p) => p.time.isAfter(now)), isTrue);
+    });
+
+    test('a different number of days changes the range', () async {
+      final noaa = service((_) => ok(hiloResponse(now)));
+      await noaa.fetchHighLowsAhead('8661070', days: 7);
+      expect(requests.single.queryParameters['range'], '192'); // 8 days
+    });
+
+    test('with no signal, uses the saved copy', () async {
+      await service((_) => ok(hiloResponse(now))).fetchHighLowsAhead('8661070');
+
+      final offline = await service(noSignal).fetchHighLowsAhead('8661070');
+
+      expect(offline.fromCache, isTrue);
+      expect(offline.value, isNotEmpty);
+    });
+
+    test("it is saved apart from the app's own tide list", () async {
+      await service((_) => ok(hiloResponse(now))).fetchHighLowsAhead('8661070');
+
+      // The widget's long list must not stand in for the short list the
+      // screens use, or the other way round.
+      expect(service(noSignal).fetchUpcomingHighLows('8661070'), throwsA(isA<http.ClientException>()));
+    });
+
+    test('with no signal and nothing saved, fails', () async {
+      expect(service(noSignal).fetchHighLowsAhead('8661070'), throwsA(isA<http.ClientException>()));
+    });
+  });
+
   group('tide curve', () {
     test('a reference station uses the 6-minute predictions', () async {
       final noaa = service((_) => ok(sixMinuteResponse(now)));

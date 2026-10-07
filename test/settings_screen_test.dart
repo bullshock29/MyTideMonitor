@@ -84,6 +84,14 @@ void main() {
     expect(settings.appColor, AppColor.orange);
   });
 
+  testWidgets('explains how to add a widget, and where its options are', (tester) async {
+    await openScreen(tester);
+
+    expect(find.text('Home screen widgets'), findsOneWidget);
+    expect(find.textContaining('touch and hold an empty spot'), findsOneWidget);
+    expect(find.textContaining('its own location'), findsOneWidget);
+  });
+
   testWidgets('tapping the choice that is already selected changes nothing', (tester) async {
     await openScreen(tester);
 

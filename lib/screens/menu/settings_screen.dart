@@ -103,6 +103,19 @@ class SettingsScreen extends StatelessWidget {
             },
             onChanged: settings.setTimeFormat,
           ),
+          const Divider(),
+          _SectionHeader('Home screen widgets'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+            child: Text(
+              'To add a widget, touch and hold an empty spot on your home '
+              'screen, choose Widgets, then My Tide Monitor. Each widget has '
+              'its own location, light or dark look, and opacity: you choose '
+              'them when you add it, and can change them any time by touching '
+              'and holding the widget.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
         ],
       ),
     );
