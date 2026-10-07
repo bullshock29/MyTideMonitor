@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The look of a widget's settings screen: the phone's own light look. -->
+    <style name="ConfigTheme" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar" />
+</resources>

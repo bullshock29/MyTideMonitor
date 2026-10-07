@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_name">Tide list</string>
+    <string name="widget_description">The tide now at all your saved locations.</string>
+    <string name="widget_tile_name">Tide tile</string>
+    <string name="widget_tile_description">One location: the tide now, the next high and low, the waves and the water temperature.</string>
+    <string name="widget_empty">No saved locations yet.\nOpen My Tide Monitor and tap + to add one.</string>
+    <string name="widget_tile_open_app">Open My Tide Monitor once to set this widget up.</string>
+    <string name="widget_tile_missing">That location is no longer saved.\nTouch and hold this widget to choose another.</string>
+    <string name="widget_high">High</string>
+    <string name="widget_low">Low</string>
+    <string name="widget_rising">Rising</string>
+    <string name="widget_falling">Falling</string>
+    <string name="widget_needs_refresh">Open My Tide Monitor to refresh</string>
+    <string name="widget_next_high">Next high</string>
+    <string name="widget_next_low">Next low</string>
+    <string name="widget_waves">Waves</string>
+    <string name="widget_water">Water</string>
+    <string name="widget_wave_calm">Calm</string>
+    <string name="widget_wave_small">Small</string>
+    <string name="widget_wave_moderate">Moderate</string>
+    <string name="widget_wave_large">Large</string>
+    <string name="widget_wave_very_large">Very large</string>
+    <string name="widget_hours_ago">%dh ago</string>
+
+    <!-- The settings screen shown when a widget is added, or touched and held. -->
+    <string name="config_title_tile">Tide tile settings</string>
+    <string name="config_title_list">Tide list settings</string>
+    <string name="config_location">Location</string>
+    <string name="config_no_locations">No saved locations yet. Open My Tide Monitor and tap + to add one, then touch and hold this widget to choose it.</string>
+    <string name="config_look">Look</string>
+    <string name="config_mode_system">Phone</string>
+    <string name="config_mode_light">Light</string>
+    <string name="config_mode_dark">Dark</string>
+    <string name="config_mode_note">Phone follows your phone\'s light or dark setting. The color always matches the theme color chosen in the app.</string>
+    <string name="config_text_size">Text size</string>
+    <string name="config_size_small">Small</string>
+    <string name="config_size_medium">Medium</string>
+    <string name="config_size_large">Large</string>
+    <string name="config_opacity">Opacity: %1$d%%</string>
+    <string name="config_opacity_note">Lower is more see-through. Android can\'t blur what is behind a widget, so this controls how solid the tinted glass is.</string>
+    <string name="config_done">Done</string>
+</resources>

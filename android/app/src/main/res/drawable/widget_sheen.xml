@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A soft light sheen fading down from the top edge, which is what makes the
+     card read as glass. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:startColor="#66FFFFFF"
+        android:centerColor="#14FFFFFF"
+        android:endColor="#00FFFFFF" />
+    <corners android:radius="24dp" />
+</shape>
